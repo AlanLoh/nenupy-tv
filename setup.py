@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 import re
 import nenupytv
 
-meta_file = open('nenupytf/metadata.py').read()
+meta_file = open('nenupytv/metadata.py').read()
 metadata  = dict(re.findall("__([a-z]+)__\s*=\s*'([^']+)'", meta_file))
 
 setup(
@@ -12,7 +12,7 @@ setup(
     install_requires = ['numpy', 'astropy'],
     python_requires = '>=3.5',
     scripts = [],
-    version = nenupytf.__version__,
+    version = nenupytv.__version__,
     description = 'NenuFAR-TV Python package',
     url = 'https://github.com/AlanLoh/nenupy-tv.git',
     author = metadata['author'],
