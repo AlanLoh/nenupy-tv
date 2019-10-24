@@ -57,24 +57,87 @@ class Crosslets(object):
 
     # --------------------------------------------------------- #
     # ------------------------ Methods ------------------------ #
-    def correl_matrix(self, freq=None):
+    def cross_corr(self, vis=None, polar='xx'):
+        """ Given XST visibilities, returns the cross-correlation
+            matrix
+        """
+        if vis is None:
+            vis = self.data[0, 0, :] # time, freq, vis
+
+        n_ma = self.meta['ma'].size
+        mat_size = n_ma*2
+        
+        mat_tot = np.zeros(
+            (mat_size, mat_size),
+            dtype='complex64'
+            )
+        mat_pol = np.zeros(
+            (n_ma, n_ma),
+            dtype='complex64'
+            )
+        
+        indices = np.tril_indices(mat_size, 0)
+        pol_idx = np.tril_indices(n_ma, 0)
+        diag_idx = np.arange(mat_size-1)
+
+        mat_tot[indices] = vis
+
+        # Reconstruct missing XY
+        mat_tot[diag_idx, diag_idx+1] = mat_tot[diag_idx+1, diag_idx].conj()
+
+        if polar.lower() == 'xx':
+            xx_idx = tuple([
+                pol_idx[0]*2,
+                pol_idx[1]*2
+                ])
+            # mat = mat_tot[::2, ::2]
+            selected_pol = mat_tot[xx_idx]
+        elif polar.lower() == 'xy':
+            xy_idx = tuple([
+                pol_idx[0]*2,
+                pol_idx[1]*2 + 1
+                ])
+            # mat = mat_tot[::2, 1::2]
+            selected_pol = mat_tot[xy_idx]
+        elif polar.lower() == 'yx':
+            yx_idx = tuple([
+                pol_idx[0]*2 + 1,
+                pol_idx[1]*2
+                ])
+            # mat = mat_tot[1::2, ::2]
+            selected_pol = mat_tot[yx_idx]
+        elif polar.lower() == 'yy':
+            yy_idx = tuple([
+                pol_idx[0]*2 + 1,
+                pol_idx[1]*2 + 1
+                ])
+            # mat = mat_tot[1::2, 1::2]
+            selected_pol = mat_tot[yy_idx]
+        else:
+            raise ValueError(
+                'Polarization not understood.'
+                )
+
+        mat_pol[pol_idx] = selected_pol
+
+        return mat_pol
+
+
+    def gen_cross(self, freq=None, polar='xx'):
         """ Generator of correlation matrices for each time
             at a particular frequency.
         """
-        n_ma = self.meta['ma'].size
-        mat = np.zeros(
-            (n_ma*2, n_ma*2),
-            dtype='complex64'
-            )
-        indices = np.tril_indices(n_ma*2, 0)
-
         if freq is None:
             freq = self.meta['freq'][0]
         sb_idx = np.argmin(np.abs(freq - self.meta['freq']))
         
         for it in range(self.time.size):
-            mat[indices] = self.data[it, sb_idx, :]
-            yield mat
+            matrix = self.cross_corr(
+                vis=self.data[it, sb_idx, :],
+                polar=polar
+                )
+
+            yield matrix
 
 
     # --------------------------------------------------------- #
