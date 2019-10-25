@@ -10,15 +10,18 @@ __email__ = 'alan.loh@obspm.fr'
 __status__ = 'Production'
 __all__ = [
     'lst',
-    'lha'
+    'lha',
+    'eq_zenith'
     ]
 
 
 from astropy.time import Time
 from astropy import units as u
-from astropy.coordinates import EarthLocation, Angle
+from astropy.coordinates import EarthLocation, Angle, SkyCoord
 
-
+# ============================================================= #
+# ---------------------------- lst ---------------------------- #
+# ============================================================= #
 def lst(time, location):
     """ Local sidereal time
 
@@ -45,8 +48,12 @@ def lst(time, location):
     lon = location.to_geodetic().lon
     lst = time.sidereal_time('apparent', lon)
     return lst.hourangle
+# ============================================================= #
 
 
+# ============================================================= #
+# ---------------------------- lha ---------------------------- #
+# ============================================================= #
 def lha(time, location, ra):
     """ Local hour angle of an object in the observer's sky
 
@@ -71,4 +78,42 @@ def lha(time, location, ra):
     elif ha > 360:
         ha -= 360.
     return ha
+# ============================================================= #
+
+
+# ============================================================= #
+# ------------------------- eq_zenith ------------------------- #
+# ============================================================= #
+def eq_zenith(time, location):
+    """ Get the ra dec coordinates of the zenith
+        
+        Parameters
+        ----------
+        time : `astropy.time.Time`
+            UTC time
+        location : `astropy.coord.EarthLocation`
+            Location of the instrument
+
+        Returns
+        -------
+        ra : float
+            Right Ascension in degrees
+        dec : float
+            Declination in degrees
+    """
+    zen_alt = 90*u.deg
+    zen_az = 0*u.deg
+    azel = SkyCoord(
+        alt=zen_alt,
+        az=zen_az,
+        obstime=time,
+        location=location,
+        frame='altaz'
+        )
+    eq = azel.icrs
+    return eq.ra.deg, eq.dec.deg
+# ============================================================= #
+
+
+
 

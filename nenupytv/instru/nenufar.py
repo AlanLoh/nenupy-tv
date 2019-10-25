@@ -28,7 +28,7 @@ class NenuFAR(object):
     """ NenuFAR array object
     """
 
-    def __init__(self):
+    def __init__(self, miniarrays=None):
         self.lon = 47.375944 * u.deg
         self.lat = 2.193361 * u.deg
         self.height = 136.195 * u.m
@@ -39,6 +39,25 @@ class NenuFAR(object):
 
     # --------------------------------------------------------- #
     # --------------------- Getter/Setter --------------------- #
+    @property
+    def ma(self):
+        """ Active mini-arrays indices
+        """
+        return self._ma
+    @ma.setter
+    def ma(self, m):
+        if m is None:
+            self._ma = ma_indices
+        else:
+            try:
+                self._ma = ma_indices[m]
+            except:
+                raise Exception(
+                    'Something went wrong during ma selection.'
+                    )
+        return
+
+
     @property
     def coord(self):
         """ Coordinate object of NenuFAR
