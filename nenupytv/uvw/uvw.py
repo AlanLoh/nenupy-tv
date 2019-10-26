@@ -1,6 +1,12 @@
 #! /usr/bin/python3
 # -*- coding: utf-8 -*-
 
+"""
+    Test :
+    from nenupytv.uvw import UVW;  from astropy.time import Time, TimeDelta
+    u = UVW()
+    u.track(freq=70, tmin=Time('2019-06-18 17:10:00'), tmax=Time('2019-06-18 17:40:00'), dt=TimeDelta(60, format='sec'), ra=0, dec=90)
+"""
 
 __author__ = 'Alan Loh, Julien Girard'
 __copyright__ = 'Copyright 2019, nenupytv'
@@ -18,7 +24,7 @@ from astropy.constants import c as lspeed
 from astropy import units as u
 
 from nenupytv.instru import NenuFAR
-from nenupytv.astro import lha, eq_zenith
+from nenupytv.astro import lha, eq_zenith, rotz
 
 
 # ============================================================= #
@@ -100,6 +106,9 @@ class UVW(object):
             towards (ra, dec).
             If ra and dec are None, local zenith is assumed.
 
+            If uvw has already been calculated, the new values
+            are stacked to the previous ones, as for a tracking.
+
             Parameters
             ----------
             ra : float
@@ -136,12 +145,29 @@ class UVW(object):
             dpos = self.positions[i] - self.positions[j]
             xyz = rot_cel * np.matrix(dpos).T
             uvw_k = rot_uvw * xyz
-            uvw[k, ...] = uvw_k / wavel
-        
+            uvw[k, ...] = rotz(uvw_k.T, 90).T / wavel
         if self.uvw is None:
             self.uvw = uvw
         else:
             self.uvw = np.vstack((self.uvw, uvw))
+
+        return
+
+
+    def track(self, freq, tmin, tmax, dt, ra=None, dec=None):
+        """ Compute UV corrdiantes for a tracking
+        """
+        period = tmax - tmin
+        ntimes = int(period.sec // dt.sec)
+
+        for i in range(ntimes):
+            time = tmin + i * dt
+            self.compute(
+                freq=freq,
+                time=time,
+                ra=ra,
+                dec=dec
+                )
 
         return
 
@@ -176,6 +202,7 @@ class UVW(object):
             linewidths=0,
             vmax=None)
 
+        ax.set_aspect('equal')
         ax.margins(0)
         
         divider = make_axes_locatable(ax)
@@ -354,6 +381,8 @@ class UVW(object):
             location=self.instru.coord,
             ra=ra
             )
+
+        ha = np.radians(ha)
         dec = np.radians(dec)
 
         sinr = np.sin(ha)
@@ -375,8 +404,8 @@ class UVW(object):
         mask = (self.uvw[:, 0] != 0.) & (self.uvw[:, 1] != 0.)
         u = self.uvw[:, 0][mask]
         v = self.uvw[:, 1][mask]
-        u = np.hstack((-u, u))
-        v = np.hstack((-v, v))
+        # u = np.hstack((-u, u))
+        # v = np.hstack((-v, v))
         return u, v
 # ============================================================= #
 

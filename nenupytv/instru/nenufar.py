@@ -94,6 +94,13 @@ class NenuFAR(object):
 
     # --------------------------------------------------------- #
     # ------------------------ Methods ------------------------ #
+    def plot_array(self):
+        """
+        """
+        import matplotlib.pyplot as plt
+        plt.plot(self.pos[:, 0], self.pos[:, 1], marker='o', linestyle='')
+        plt.show()
+        return
 
     # --------------------------------------------------------- #
     # ----------------------- Internal ------------------------ #

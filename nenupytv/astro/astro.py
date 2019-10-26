@@ -11,13 +11,16 @@ __status__ = 'Production'
 __all__ = [
     'lst',
     'lha',
-    'eq_zenith'
+    'eq_zenith',
+    'rotz'
     ]
 
 
+import numpy as np
 from astropy.time import Time
 from astropy import units as u
 from astropy.coordinates import EarthLocation, Angle, SkyCoord
+
 
 # ============================================================= #
 # ---------------------------- lst ---------------------------- #
@@ -35,7 +38,7 @@ def lst(time, location):
         Returns
         -------
         lst : float
-            Local sidereal time in hour angle
+            Local sidereal time in degrees
     """
     if not isinstance(time, Time):
         raise TypeError(
@@ -47,7 +50,7 @@ def lst(time, location):
             )
     lon = location.to_geodetic().lon
     lst = time.sidereal_time('apparent', lon)
-    return lst.hourangle
+    return lst.deg#.hourangle
 # ============================================================= #
 
 
@@ -69,9 +72,9 @@ def lha(time, location, ra):
         Returns
         -------
         lha : float
-            Local hour angle
+            Local hour angle in degrees
     """
-    ra = Angle(ra * u.deg).hourangle
+    ra = Angle(ra * u.deg).deg#.hourangle
     ha = lst(time, location) - ra
     if ha < 0:
         ha += 360.
@@ -115,5 +118,21 @@ def eq_zenith(time, location):
 # ============================================================= #
 
 
+# ============================================================= #
+# --------------------------- rotz ---------------------------- #
+# ============================================================= #
+def rotz(array, angle):
+    """ Rotate the 3D array by an angle along z-axis
+    """
+    ang = np.radians(angle)
+    cosa = np.cos(ang)
+    sina = np.sin(ang)
+    rot = np.array([
+            [cosa, -sina, 0],
+            [sina,  cosa, 0],
+            [   0,     0, 1]
+        ])
+    return np.dot(array, rot)
+# ============================================================= #
 
 

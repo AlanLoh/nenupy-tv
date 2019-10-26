@@ -18,6 +18,8 @@ __all__ = [
 import numpy as np
 from os.path import dirname, join
 
+from nenupytv.astro import rotz
+
 
 location_file  = join(
     dirname(__file__),
@@ -64,7 +66,7 @@ def parse_file(lfile):
         dtype='int'
         )
 
-    return positions, names, indices
+    return rotz(positions, 90), names, indices
 
 
 ma_positions, ma_names, ma_indices = parse_file(location_file)
