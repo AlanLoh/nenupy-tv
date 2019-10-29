@@ -33,8 +33,7 @@ class NenuFAR(object):
         self.lat = 2.193361 * u.deg
         self.height = 136.195 * u.m
 
-        self.ma = ma_indices
-        self.pos = ma_positions
+        self.ma = miniarrays
 
 
     # --------------------------------------------------------- #
@@ -72,6 +71,20 @@ class NenuFAR(object):
             lon=self.lon,
             height=self.height
             )
+
+
+    @property
+    def pos(self):
+        """ Mini-array positions
+        """
+        return ma_positions[self.ma]
+
+
+    @property
+    def names(self):
+        """ Names of the mini-arrays
+        """
+        return ma_names[self._ma]
 
 
     @property

@@ -2,6 +2,14 @@
 # -*- coding: utf-8 -*-
 
 
+""" 
+    TO DO:
+    - flagging (en freq et temps)
+    - averaging (en temps et freq)
+    - split crosscorr matrix between cross and auto --> just a mask ?
+"""
+
+
 __author__ = 'Alan Loh, Julien Girard'
 __copyright__ = 'Copyright 2019, nenupytv'
 __credits__ = ['Alan Loh', 'Julien Girard']
@@ -60,6 +68,19 @@ class Crosslets(object):
     def cross_corr(self, vis=None, polar='xx'):
         """ Given XST visibilities, returns the cross-correlation
             matrix
+
+            Parameters
+            ----------
+            vis : `np.ndarray`
+                Array of visibilities (n_baselines * pol)
+                This can be `self.data[time_i, freq_j, :]`
+            polar : str
+                Polarization requested
+
+            Returns
+            -------
+            cross_correlation : `np.ndarray`
+                Matrix of cross-correlations (n_ant, n_ant)
         """
         if vis is None:
             vis = self.data[0, 0, :] # time, freq, vis

@@ -1,12 +1,18 @@
 #! /usr/bin/python3
 # -*- coding: utf-8 -*-
 
+
 """
     Test :
     from nenupytv.uvw import UVW;  from astropy.time import Time, TimeDelta
     u = UVW()
     u.track(freq=70, tmin=Time('2019-06-18 17:10:00'), tmax=Time('2019-06-18 17:40:00'), dt=TimeDelta(60, format='sec'), ra=0, dec=90)
+    
+    TO DO:
+    - method to triangularize self.uvw ang get a shape (30, 16, 820, 3)
+
 """
+
 
 __author__ = 'Alan Loh, Julien Girard'
 __copyright__ = 'Copyright 2019, nenupytv'
@@ -21,6 +27,7 @@ __all__ = [
 
 import numpy as np
 from astropy.constants import c as lspeed
+from astropy.time import Time, TimeDelta
 from astropy import units as u
 
 from nenupytv.instru import NenuFAR
@@ -154,14 +161,65 @@ class UVW(object):
         return
 
 
-    def track(self, freq, tmin, tmax, dt, ra=None, dec=None):
+    def scan_times(self, times=None, tmin=None, tmax=None, dt=None):
+        """ Function to return a time list that could be ingested
+            by `self.track()`. Either give the list of times or
+            a start and stop times as well as a time step.
+
+            Parameters
+            ----------
+            times : `astropy.Time`
+                List of times or a particular time
+            tmin : `astropy.Time`
+                Start time
+            tmax : `astropy.Time`
+                Stop time
+            dt : `astropy.TimeDelta`
+                Time step
+
+            Returns
+            -------
+            time_list : `astropy.Time`
+                List of times
+        """
+        if times is not None:
+            if not isinstance(times, Time):
+                raise TypeError(
+                    '`times` should be a Time object'
+                    )
+            if hasattr(times, '__len__'):
+                times_list = times
+            else:
+                times_list = Time([times])
+        elif (tmin is not None) & (tmax is not None) & (dt is not None):
+            if not isinstance(tmin, Time):
+                raise TypeError(
+                    'tmin is not a Time object'
+                    )
+            if not isinstance(tmax, Time):
+                raise TypeError(
+                    'tmax is not a Time object'
+                    )
+            if not isinstance(dt, TimeDelta):
+                raise TypeError(
+                    'dt is not a TimeDelta object'
+                    )
+            period = tmax - tmin
+            ntimes = int(period.sec // dt.sec)
+            times_list = tmin + np.arange(ntimes) * dt
+
+        else:
+            raise AttributeError(
+                'Either fill `times` or `tmin`, `tmax` and `dt`.'
+                )
+
+        return times_list
+
+
+    def track(self, freq, times, ra=None, dec=None):
         """ Compute UV corrdiantes for a tracking
         """
-        period = tmax - tmin
-        ntimes = int(period.sec // dt.sec)
-
-        for i in range(ntimes):
-            time = tmin + i * dt
+        for time in times:
             self.compute(
                 freq=freq,
                 time=time,
@@ -404,8 +462,8 @@ class UVW(object):
         mask = (self.uvw[:, 0] != 0.) & (self.uvw[:, 1] != 0.)
         u = self.uvw[:, 0][mask]
         v = self.uvw[:, 1][mask]
-        # u = np.hstack((-u, u))
-        # v = np.hstack((-v, v))
+        u = np.hstack((-u, u))
+        v = np.hstack((-v, v))
         return u, v
 # ============================================================= #
 
