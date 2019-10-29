@@ -15,7 +15,7 @@ __all__ = [
 
 from astropy import units as u
 from astropy.coordinates import EarthLocation 
-from itertools import permutations
+from itertools import product
 import numpy as np
 
 from nenupytv.instru import ma_names, ma_positions, ma_indices
@@ -97,13 +97,9 @@ class NenuFAR(object):
             baselines : `np.ndarray`
                 Array of baseline (length-2 tuples of antennae)
         """
-        bsl = list(permutations(self.ma, 2))
-        # Add auto-correlations
-        for m in self.ma:
-            bsl.append((m, m))
+        bsl = list(product(self.ma, repeat=2))
         return np.array(bsl)
-    
-    
+
 
     # --------------------------------------------------------- #
     # ------------------------ Methods ------------------------ #

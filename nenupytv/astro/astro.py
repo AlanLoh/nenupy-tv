@@ -12,7 +12,8 @@ __all__ = [
     'lst',
     'lha',
     'eq_zenith',
-    'rotz'
+    'rotz',
+    'wavelength'
     ]
 
 
@@ -20,6 +21,7 @@ import numpy as np
 from astropy.time import Time
 from astropy import units as u
 from astropy.coordinates import EarthLocation, Angle, SkyCoord
+from astropy.constants import c as lspeed
 
 
 # ============================================================= #
@@ -133,6 +135,28 @@ def rotz(array, angle):
             [   0,     0, 1]
         ])
     return np.dot(array, rot)
+# ============================================================= #
+
+
+# ============================================================= #
+# ------------------------ wavelength ------------------------- #
+# ============================================================= #
+def wavelength(freq):
+    """ Convert between MHz and wavelength in meters
+
+        Returns
+        -------
+        wavelength : `np.ndarray`
+            Wavelength in meters
+    """
+    if not hasattr(freq, '__len__'):
+        freq = [freq]
+    if not isinstance(freq, np.ndarray):
+        freq = np.array(freq)
+    freq *= u.MHz
+    freq = freq.to(u.Hz)
+    wavel = lspeed.value / freq.value
+    return wavel
 # ============================================================= #
 
 

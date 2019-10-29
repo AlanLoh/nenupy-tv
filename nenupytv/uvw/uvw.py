@@ -26,12 +26,10 @@ __all__ = [
 
 
 import numpy as np
-from astropy.constants import c as lspeed
 from astropy.time import Time, TimeDelta
-from astropy import units as u
 
 from nenupytv.instru import NenuFAR
-from nenupytv.astro import lha, eq_zenith, rotz
+from nenupytv.astro import lha, eq_zenith, rotz, wavelength
 
 
 # ============================================================= #
@@ -49,6 +47,7 @@ class UVW(object):
         self.lat = np.radians(self.instru.lat)
 
         self.uvw = None
+        self.wavel = None
 
 
     # --------------------------------------------------------- #
@@ -126,6 +125,11 @@ class UVW(object):
                 Time at which observation happened
             freq : float
                 Frequency in MHz 
+
+            Returns
+            -------
+            self.uvw : `np.ndarray`
+                Shape (time, freq, nant*nant, 3)
         """
         if (ra is None) and (dec is None):
             ra, dec = eq_zenith(
@@ -133,14 +137,13 @@ class UVW(object):
                 location=self.instru.coord
                 )
 
-        freq *= u.MHz
-        freq = freq.to(u.Hz)
-        wavel = lspeed.value / freq.value
+        self.wavel = wavelength(freq)
 
         uvw = np.zeros(
-            (self.bsl.shape[0], 3, 1) # .., nfreq
+            (1, self.wavel.size, self.bsl.shape[0], 3)
             )
         
+        # Prepare the transformation matrices
         rot_cel = self._celestial()
         rot_uvw = self._uvwplane(
             time=time,
@@ -148,11 +151,14 @@ class UVW(object):
             dec=dec
             )
 
+        # Compute the UVW coordinates for each baseline
         for k, (i, j) in enumerate(self.bsl):
             dpos = self.positions[i] - self.positions[j]
             xyz = rot_cel * np.matrix(dpos).T
             uvw_k = rot_uvw * xyz
-            uvw[k, ...] = rotz(uvw_k.T, 90).T / wavel
+            uvw[0, :, k, :] = rotz(uvw_k.T, 90) / self.wavel[:, np.newaxis]
+
+        # Stack the UVW coordinates by time
         if self.uvw is None:
             self.uvw = uvw
         else:
@@ -230,7 +236,7 @@ class UVW(object):
         return
 
 
-    def plot(self):
+    def plot(self, freq=None):
         """ Plot the UV distribution
         """
         if self.uvw is None:
@@ -243,7 +249,7 @@ class UVW(object):
 
         fig, ax = plt.subplots(figsize=(7, 7))
 
-        u, v = self._uvplot()
+        u, v = self._uvplot(freq=freq)
 
         hbins = ax.hexbin(
             x=u,
@@ -284,7 +290,7 @@ class UVW(object):
         return
 
 
-    def plot_radial(self):
+    def plot_radial(self, freq=None):
         """ Plot the radial cut ont the UV distribution
         """
         if self.uvw is None:
@@ -295,7 +301,7 @@ class UVW(object):
         import matplotlib.pyplot as plt
         from astropy.modeling import models, fitting
 
-        u, v = self._uvplot()
+        u, v = self._uvplot(freq=freq)
         pos_v = v > 0.
         u = u[pos_v]
         v = v[pos_v]
@@ -359,7 +365,7 @@ class UVW(object):
         return
 
 
-    def plot_azimuthal(self):
+    def plot_azimuthal(self, freq=None):
         """ Plot the azimuthal cut ont the UV distribution
         """
         if self.uvw is None:
@@ -369,7 +375,7 @@ class UVW(object):
 
         import matplotlib.pyplot as plt
 
-        u, v = self._uvplot()
+        u, v = self._uvplot(freq=freq)
         pos_v = v > 0.
         u = u[pos_v]
         v = v[pos_v]
@@ -455,15 +461,20 @@ class UVW(object):
         return transfo
 
 
-    def _uvplot(self):
+    def _uvplot(self, freq=None):
         """ Return UV for plotting purposes
         """
+        if freq is None:
+            fid = 0
+        else:
+            fid = np.argmin(np.abs(self.wavel - wavelength(freq)))
+        uvw_f = self.uvw[:, fid, :, :]
         # dont show autocorrelations
-        mask = (self.uvw[:, 0] != 0.) & (self.uvw[:, 1] != 0.)
-        u = self.uvw[:, 0][mask]
-        v = self.uvw[:, 1][mask]
-        u = np.hstack((-u, u))
-        v = np.hstack((-v, v))
+        mask = (uvw_f[..., 0] != 0.) & (uvw_f[..., 1] != 0.)
+        u = uvw_f[..., 0][mask]
+        v = uvw_f[..., 1][mask]
+        # u = np.hstack((-u, u))
+        # v = np.hstack((-v, v))
         return u, v
 # ============================================================= #
 
