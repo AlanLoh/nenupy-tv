@@ -26,7 +26,7 @@ import numpy as np
 # ============================================================= #
 # --------------------------- Grid ---------------------------- #
 # ============================================================= #
-class Grid():
+class Grid(object):
     """
     """
 
@@ -52,13 +52,8 @@ class Grid():
             )
         resol_deg = np.degrees(resol_rad)
         idx = (np.abs(resol_deg - r)).argmin()
-        if hasattr(self, 'resol'):
-            if resol_deg[idx] == self.resol:
-                # No need to recompute it
-                return
         self._resol = resol_deg[idx]
         self.nside = nsides[idx]
-        
         return
 
 

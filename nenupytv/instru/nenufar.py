@@ -33,6 +33,8 @@ class NenuFAR(object):
         self.lat = 2.193361 * u.deg
         self.height = 136.195 * u.m
 
+        self.tri_x = None
+        self.tri_y = None
         self.ma = miniarrays
 
 
@@ -54,6 +56,7 @@ class NenuFAR(object):
                 raise Exception(
                     'Something went wrong during ma selection.'
                     )
+        self.tri_x, self.tri_y = np.tril_indices(self._ma.size, 0)
         return
 
 

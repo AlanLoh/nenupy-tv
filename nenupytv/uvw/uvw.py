@@ -152,11 +152,33 @@ class UVW(object):
             )
 
         # Compute the UVW coordinates for each baseline
+        # print('TESTING', self.bsl.shape)
+        # t0 = Time.now()
         for k, (i, j) in enumerate(self.bsl):
             dpos = self.positions[i] - self.positions[j]
             xyz = rot_cel * np.matrix(dpos).T
             uvw_k = rot_uvw * xyz
             uvw[0, :, k, :] = rotz(uvw_k.T, 90) / self.wavel[:, np.newaxis]
+        # print('first method',(Time.now()-t0).sec)
+        # import matplotlib.pyplot as plt
+        # plt.plot(uvw[0,0,:,0], uvw[0,0,:,1], 'b.', linestyle='')
+        # plt.show()
+        # print('OLD UVW', uvw.shape)
+        
+        # THIS IS A WAAAAY FASTEST METHOD
+        # t0 = Time.now()
+        # xi, yi = np.tril_indices(self.instru.ma.size, 0)
+        # dpos = self.positions[xi] - self.positions[yi]
+        # xyz = rot_cel * np.matrix(dpos).T
+        # uvw_k = rot_uvw * xyz
+        # uvw = np.array(uvw_k)[:, :, np.newaxis] / self.wavel[np.newaxis , np.newaxis, :]
+        # print('second method',(Time.now()-t0).sec)
+        # print('NEW UVW', uvw.shape)
+
+        # plt.plot(uvw[0,:,0], uvw[1,:,0], 'b.', linestyle='')
+        # plt.plot(-uvw[0,:,0], -uvw[1,:,0], 'b.', linestyle='')
+        # plt.show()
+        # stop
 
         # Stack the UVW coordinates by time
         if self.uvw is None:
@@ -234,6 +256,12 @@ class UVW(object):
                 )
 
         return
+
+
+    def reshape(self):
+        """ Reshape `self.uvw` array to match visibilities
+        """
+        return self.uvw
 
 
     def plot(self, freq=None):
