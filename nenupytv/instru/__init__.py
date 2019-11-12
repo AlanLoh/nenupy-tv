@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 
-from .miniarrays import *
+from .nenufar_inst import *
+from .radioarray import *
 from .nenufar import *
 
