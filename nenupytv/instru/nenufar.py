@@ -13,108 +13,30 @@ __all__ = [
     ]
 
 
-from astropy import units as u
-from astropy.coordinates import EarthLocation 
-from itertools import product
-import numpy as np
-
-from nenupytv.instru import ma_names, ma_positions, ma_indices
+from nenupytv.instru import RadioArray
+from nenupytv.instru import ma_names, ma_positions, nenufar_pos
 
 
 # ============================================================= #
-# ------------------------ Crosslets -------------------------- #
+# -------------------------- NenuFAR -------------------------- #
 # ============================================================= #
-class NenuFAR(object):
+class NenuFAR(RadioArray):
     """ NenuFAR array object
     """
 
     def __init__(self, miniarrays=None):
-        self.lon = 47.375944 * u.deg
-        self.lat = 2.193361 * u.deg
-        self.height = 136.195 * u.m
-
-        self.tri_x = None
-        self.tri_y = None
-        self.ma = miniarrays
-
-
-    # --------------------------------------------------------- #
-    # --------------------- Getter/Setter --------------------- #
-    @property
-    def ma(self):
-        """ Active mini-arrays indices
-        """
-        return self._ma
-    @ma.setter
-    def ma(self, m):
-        if m is None:
-            self._ma = ma_indices
-        else:
-            try:
-                self._ma = ma_indices[m]
-            except:
-                raise Exception(
-                    'Something went wrong during ma selection.'
-                    )
-        self.tri_x, self.tri_y = np.tril_indices(self._ma.size, 0)
-        return
-
-
-    @property
-    def coord(self):
-        """ Coordinate object of NenuFAR
-
-            Returns
-            -------
-            coord : `astropy.coordinates.EarthLocation`
-                Coordinates of the whole NenuFAR array
-        """
-        return EarthLocation(
-            lat=self.lat,
-            lon=self.lon,
-            height=self.height
-            )
-
-
-    @property
-    def pos(self):
-        """ Mini-array positions
-        """
-        return ma_positions[self.ma]
-
-
-    @property
-    def names(self):
-        """ Names of the mini-arrays
-        """
-        return ma_names[self._ma]
-
-
-    @property
-    def baselines(self):
-        """ Baselines computed for all active Mini-Arrays of 
-            NenuFAR.
-
-            Returns
-            -------
-            baselines : `np.ndarray`
-                Array of baseline (length-2 tuples of antennae)
-        """
-        bsl = list(product(self.ma, repeat=2))
-        return np.array(bsl)
+        super().__init__(
+            array_name='NenuFAR',
+            ant_names=ma_names,
+            ant_positions=ma_positions,
+            array_position=nenufar_pos,
+            antennas=miniarrays
+        )
 
 
     # --------------------------------------------------------- #
     # ------------------------ Methods ------------------------ #
-    def plot_array(self):
-        """
-        """
-        import matplotlib.pyplot as plt
-        plt.plot(self.pos[:, 0], self.pos[:, 1], marker='o', linestyle='')
-        plt.show()
-        return
 
-    # --------------------------------------------------------- #
-    # ----------------------- Internal ------------------------ #
 
 # ============================================================= #
+

@@ -12,12 +12,15 @@ __all__ = [
     'ma_names',
     'ma_positions',
     'ma_indices',
+    'nenufar_pos',
     'ant_pos'
     ]
 
 
 import numpy as np
 from os.path import dirname, join
+from astropy import units as u
+from astropy.coordinates import EarthLocation 
 
 from nenupytv.astro import rotz
 
@@ -71,6 +74,13 @@ def parse_file(lfile):
 
 
 ma_positions, ma_names, ma_indices = parse_file(location_file)
+
+
+nenufar_pos = EarthLocation(
+            lat=2.193361 * u.deg,
+            lon=47.375944 * u.deg,
+            height=136.195 * u.m
+            )
 
 
 ant_pos = np.array([

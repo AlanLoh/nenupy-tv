@@ -28,7 +28,7 @@ __all__ = [
 import numpy as np
 from astropy.time import Time, TimeDelta
 
-from nenupytv.instru import NenuFAR
+from nenupytv.instru import RadioArray, NenuFAR
 from nenupytv.astro import lha, eq_zenith, rotz, wavelength
 
 
@@ -39,12 +39,12 @@ class UVW(object):
     """
     """
 
-    def __init__(self, NenuFAR_instance=NenuFAR()):
-        self.instru = NenuFAR_instance
+    def __init__(self, radioarray=NenuFAR()):
+        self.instru = radioarray
         
         self.bsl = self.instru.baselines
-        self.positions = self.instru.pos
-        self.lat = np.radians(self.instru.lat)
+        self.positions = self.instru.ant_positions
+        self.lat = np.radians(self.instru.array_position.lat.deg)
 
         self.uvw = None
         self.wavel = None
@@ -59,9 +59,9 @@ class UVW(object):
         return self._instru
     @instru.setter
     def instru(self, i):
-        if not isinstance(i, NenuFAR):
+        if not isinstance(i, RadioArray):
             raise TypeError(
-                'NenuFAR object required'
+                'RadioArray object required'
                 )
         self._instru = i
         return
@@ -155,8 +155,8 @@ class UVW(object):
         uvw = np.zeros(
             (
                 1,
-                self.instru.ma.size,
-                self.instru.ma.size,
+                self.instru.n_ant,
+                self.instru.n_ant,
                 3
             )
         )
@@ -462,7 +462,7 @@ class UVW(object):
         """
         ha = lha(
             time=time,
-            location=self.instru.coord,
+            location=self.instru.array_position,
             ra=ra
             )
 
