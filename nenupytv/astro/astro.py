@@ -12,6 +12,7 @@ __all__ = [
     'lst',
     'lha',
     'eq_zenith',
+    'to_radec',
     'rotz',
     'wavelength'
     ]
@@ -108,6 +109,44 @@ def eq_zenith(time, location):
     """
     zen_alt = 90*u.deg
     zen_az = 0*u.deg
+    azel = SkyCoord(
+        alt=zen_alt,
+        az=zen_az,
+        obstime=time,
+        location=location,
+        frame='altaz'
+        )
+    eq = azel.icrs
+    return eq.ra.deg, eq.dec.deg
+# ============================================================= #
+
+
+# ============================================================= #
+# ------------------------- eq_zenith ------------------------- #
+# ============================================================= #
+def to_radec(alt, az, time, location):
+    """ Get the ra dec coordinates of the a altaz pointing
+        
+        Parameters
+        ----------
+        alt : float
+            Elevation in degrees
+        az : float
+            Azimuth in degrees
+        time : `astropy.time.Time`
+            UTC time
+        location : `astropy.coord.EarthLocation`
+            Location of the instrument
+
+        Returns
+        -------
+        ra : float
+            Right Ascension in degrees
+        dec : float
+            Declination in degrees
+    """
+    zen_alt = alt*u.deg
+    zen_az = az*u.deg
     azel = SkyCoord(
         alt=zen_alt,
         az=zen_az,
