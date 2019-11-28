@@ -70,7 +70,8 @@ def parse_file(lfile):
         dtype='int'
         )
 
-    return rotz(positions, 90), names, indices
+#    return rotz(positions, 90), names, indices
+    return positions, names, indices
 
 
 ma_positions, ma_names, ma_indices = parse_file(location_file)

@@ -134,7 +134,7 @@ class UVW(object):
         if (ra is None) and (dec is None):
             ra, dec = eq_zenith(
                 time=time,
-                location=self.instru.coord
+                location=self.instru.array_position
                 )
 
         self.wavel = wavelength(freq)
@@ -298,7 +298,7 @@ class UVW(object):
         ax.set_xlabel('u ($\\lambda$)')
         ax.set_ylabel('v ($\\lambda$)')
 
-        lim = np.max(
+        lim = 1.1*np.max(
                 (np.abs(ax.get_xlim()).max(),
                 np.abs(ax.get_ylim()).max())
             )
