@@ -148,9 +148,10 @@ class Crosslets(object):
         """ Generator of correlation matrices for each time
             at a particular frequency.
         """
-        if freq is None:
-            freq = self.meta['freq'][0]
-        sb_idx = np.argmin(np.abs(freq - self.meta['freq']))
+        if freq is not None:
+            sb_idx = np.argmin(np.abs(freq - self.meta['freq']))
+        else:
+            sb_idx = np.arange(self.meta['freq'].size)
         
         for it in range(self.time.size):
             matrix = self.cross_corr(
@@ -159,6 +160,28 @@ class Crosslets(object):
                 )
 
             yield matrix
+
+
+    def reshape(self):
+        """ Reshape the data to match the UVW array
+        """
+        data = np.zeros(
+            (
+                self.time.size,
+                self.meta['freq'].size,
+                self.meta['ma'].size,
+                self.meta['ma'].size,
+                4
+            ),
+            dtype='complex64'
+        )
+        for i_p, pol in enumerate(['xx', 'xy', 'yx', 'yy']):
+            for i_f, freq in enumerate(self.meta['freq']):
+                i_t = 0
+                for data_block in self.gen_cross(freq=freq):
+                    data[i_t, i_f, ..., i_p] = data_block
+                    i_t += 1
+        return data
 
 
     # --------------------------------------------------------- #

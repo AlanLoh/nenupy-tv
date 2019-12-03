@@ -30,6 +30,7 @@ from astropy.time import Time, TimeDelta
 
 from nenupytv.instru import RadioArray, NenuFAR
 from nenupytv.astro import lha, eq_zenith, rotz, wavelength
+from nenupytv.read import Crosslets
 
 
 # ============================================================= #
@@ -237,7 +238,7 @@ class UVW(object):
 
 
     def track(self, freq, times, ra=None, dec=None):
-        """ Compute UV corrdiantes for a tracking
+        """ Compute UV coordinates for a tracking
         """
         for time in times:
             self.compute(
@@ -246,14 +247,35 @@ class UVW(object):
                 ra=ra,
                 dec=dec
                 )
-
         return
 
 
-    def reshape(self):
-        """ Reshape `self.uvw` array to match visibilities
+    def from_crosslets(self, cross):
+        """ Compute the UVW coordinates from a
+            `~nenupytv.read.Crosslets` instanciated from a 
+            NenuFAR-TV observation file.
+
+            :param cross:
+                Cross-correlations read from a NenuFAR-TV binary
+            :type f1: `~nenupytv.read.Crosslets`
+
+            :returns: None
+            :rtype: None
         """
-        return self.uvw
+        if not isinstance(cross, Crosslets):
+            raise TypeError(
+                "Expected a Crosslet object"
+            )
+        times = self.scan_times(
+            times=cross.time
+        )
+        self.track(
+            freq=cross.meta['freq'],
+            times=times,
+            ra=None,
+            dec=None
+        )
+        return
 
 
     def plot(self, freq=None):
