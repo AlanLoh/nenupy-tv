@@ -162,7 +162,7 @@ class Crosslets(object):
             yield matrix
 
 
-    def reshape(self):
+    def reshape(self, fmean=True, tmean=True):
         """ Reshape the data to match the UVW array
         """
         data = np.zeros(
@@ -181,6 +181,17 @@ class Crosslets(object):
                 for data_block in self.gen_cross(freq=freq):
                     data[i_t, i_f, ..., i_p] = data_block
                     i_t += 1
+
+        if fmean:
+            data = np.expand_dims(
+                np.mean(data, axis=1),
+                axis=1
+                )
+        if tmean:
+            data = np.expand_dims(
+                np.mean(data, axis=0),
+                axis=0
+            )
         return data
 
 

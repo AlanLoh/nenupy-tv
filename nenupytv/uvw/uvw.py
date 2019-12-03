@@ -250,14 +250,14 @@ class UVW(object):
         return
 
 
-    def from_crosslets(self, cross):
+    def from_crosslets(self, cross, fmean=True, tmean=True):
         """ Compute the UVW coordinates from a
             `~nenupytv.read.Crosslets` instanciated from a 
             NenuFAR-TV observation file.
 
             :param cross:
                 Cross-correlations read from a NenuFAR-TV binary
-            :type f1: `~nenupytv.read.Crosslets`
+            :type cross: `~nenupytv.read.Crosslets`
 
             :returns: None
             :rtype: None
@@ -275,6 +275,16 @@ class UVW(object):
             ra=None,
             dec=None
         )
+        if fmean:
+            self.uvw = np.expand_dims(
+                np.mean(self.uvw, axis=1),
+                axis=1
+            )
+        if tmean:
+            self.uvw = np.expand_dims(
+                np.mean(self.uvw, axis=0),
+                axis=0
+            )
         return
 
 

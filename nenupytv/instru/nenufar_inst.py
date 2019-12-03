@@ -78,8 +78,8 @@ ma_positions, ma_names, ma_indices = parse_file(location_file)
 
 
 nenufar_pos = EarthLocation(
-            lat=2.193361 * u.deg,
-            lon=47.375944 * u.deg,
+            lat=47.375944 * u.deg,
+            lon=2.193361 * u.deg,
             height=136.195 * u.m
             )
 
