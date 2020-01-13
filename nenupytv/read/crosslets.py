@@ -44,6 +44,15 @@ class Crosslets(object):
     # --------------------------------------------------------- #
     # --------------------- Getter/Setter --------------------- #
     @property
+    def x_vis(self):
+        # x, y = np.tril_indices(self.meta['ma'].size, 0)
+        # xx = np.hstack((x[x!=y], y[x!=y]))
+        # yy = np.hstack((y[x!=y], x[x!=y]))
+        # return v[:, :, xx, yy, ...] + v[:, :, yy, xx, ...].conj()
+        self.data
+
+
+    @property
     def xst_bin(self):
         """ NenuFAR TV XST snapshot binary file
         """
@@ -178,7 +187,7 @@ class Crosslets(object):
         for i_p, pol in enumerate(['xx', 'xy', 'yx', 'yy']):
             for i_f, freq in enumerate(self.meta['freq']):
                 i_t = 0
-                for data_block in self.gen_cross(freq=freq):
+                for data_block in self.gen_cross(freq=freq, polar=pol):
                     data[i_t, i_f, ..., i_p] = data_block
                     i_t += 1
 

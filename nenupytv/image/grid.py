@@ -20,7 +20,7 @@ __all__ = [
     ]
 
 
-import healpy as hp
+# import healpy as hp
 import numpy as np
 import astropy.units as un
 
@@ -217,6 +217,7 @@ class Grid(object):
                         self.measurement[p, grid_v, grid_u] += self.vis[0, 0, vis_bl, p] * conv_weight
                     # assuming the PSF is the same for different correlations:
                     self.sampling[grid_v_psf, grid_u_psf] += (1+0.0j) * conv_weight_psf
+# ============================================================= #
 
 
 

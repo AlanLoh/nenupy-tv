@@ -13,6 +13,8 @@ __all__ = [
     ]
 
 
+import numpy as np
+
 from nenupytv.instru import RadioArray
 from nenupytv.instru import ma_names, ma_positions, nenufar_pos
 
@@ -32,6 +34,17 @@ class NenuFAR(RadioArray):
             array_position=nenufar_pos,
             antennas=miniarrays
         )
+
+    @property
+    def baseline_xyz(self):
+        """
+        """
+        xyz = self.ant_positions[..., np.newaxis]
+        xyz = xyz[:, :, 0][:, np.newaxis]
+        xyz = xyz - xyz.transpose(1, 0, 2)
+        bsl_xyz = xyz[np.triu_indices(self.antennas.size)]
+        return bsl_xyz
+    
 
 
     # --------------------------------------------------------- #

@@ -13,6 +13,8 @@ __all__ = [
     ]
 
 
+import numpy as np
+
 from nenupytv.image import Grid
 
 
@@ -23,46 +25,58 @@ class Dirty(object):
     """
     """
 
-    def __init__(self, npix, csize):
-        self.grid = None
-
-        self.npix = npix
-        self.csize = csize
-        self.du = None
-        self.dv = None
-        self.umax = None
-        self.umin = None
+    def __init__(self, grid):
+        self.grid = grid
+        self.dirty = np.zeros(
+            grid.measurement.shape,
+            dtype=grid.measurement.dtype
+        )
 
 
     # --------------------------------------------------------- #
     # --------------------- Getter/Setter --------------------- #
     @property
-    def du(self):
-        return self._du
-    @du.setter
-    def du(self, d):
-        if d is None:
-            if self.grid is None:
-                self.grid = Grid(...)
-        self._du = self.grid.du
-        return
-
-
-    @property
-    def dv(self):
-        return self._dv
-    @dv.setter
-    def dv(self, d):
-        if d is None:
-            if self.grid is None:
-                self.grid = Grid(...)
-        self._dv = self.grid.dv
+    def grid(self):
+        return self._grid
+    @grid.setter
+    def grid(self, g):
+        if not isinstance(g, Grid):
+            raise TypeError(
+                'Grid object expected'
+            )
+        self._grid = g
         return
 
 
     # --------------------------------------------------------- #
     # ------------------------ Methods ------------------------ #
+    def compute(self):
+        """
+        """
+        for p in range(self.grid.vis.shape[3]):
+            vis = np.fft.ifftshift(self.grid.measurement[p, ...])
+            self.dirty[p, ...] = np.fft.fftshift(np.fft.ifft2(vis))
+        return
 
+
+    def plot(self, **kwargs):
+        """
+        """
+        import matplotlib.pyplot as plt
+        image = np.abs(
+            np.sqrt(self.dirty[0, :, :]**2. + self.dirty[3, :, :]**2)
+        )
+        im = plt.imshow(
+            image,
+            origin='lower',
+            aspect='equal',
+            cmap='YlGnBu_r',
+            **kwargs
+        )
+        plt.colorbar(im)
+        plt.xlabel('RA')
+        plt.ylabel('Dec')
+        return
 
     # --------------------------------------------------------- #
     # ----------------------- Internal ------------------------ #

@@ -11,17 +11,29 @@ __status__ = 'Production'
 __all__ = [
     'lst',
     'lha',
+    'ho_zenith',
     'eq_zenith',
+    'eq_coord',
     'to_radec',
+    'to_altaz',
+    'to_gal',
     'rotz',
-    'wavelength'
+    'wavelength',
+    'ref_location'
     ]
 
 
 import numpy as np
 from astropy.time import Time
 from astropy import units as u
-from astropy.coordinates import EarthLocation, Angle, SkyCoord
+from astropy.coordinates import (
+    EarthLocation,
+    Angle,
+    SkyCoord,
+    AltAz,
+    Galactic,
+    ICRS
+)
 from astropy.constants import c as lspeed
 
 
@@ -88,6 +100,22 @@ def lha(time, location, ra):
 
 
 # ============================================================= #
+# ------------------------- ho_zenith ------------------------- #
+# ============================================================= #
+def ho_zenith(time, location):
+    """ Horizontal coordinates of zenith
+    """
+    altaz = AltAz(
+        az=0.*u.deg,
+        alt=90.*u.deg,
+        location=location,
+        obstime=time
+    )
+    return altaz
+# ============================================================= #
+
+
+# ============================================================= #
 # ------------------------- eq_zenith ------------------------- #
 # ============================================================= #
 def eq_zenith(time, location):
@@ -117,6 +145,38 @@ def eq_zenith(time, location):
         frame='altaz'
         )
     eq = azel.icrs
+    return eq.ra.deg, eq.dec.deg
+# ============================================================= #
+
+
+# ============================================================= #
+# ------------------------- eq_coord -------------------------- #
+# ============================================================= #
+def eq_coord(ra, dec):
+    """ Equatorial coordinates
+        
+        :param ra:
+            Right ascension in degrees
+        :type ra: float
+        :param dec:
+            Declination in degrees
+        :type dec: float
+
+        :returns: :class:`astropy.coordinates.ICRS` object
+        :rtype: :class:`astropy.coordinates.ICRS`
+
+        :Example:
+        
+        >>> from nenupysim.astro import eq_coord
+        >>> radec = eq_coord(
+                ra=51,
+                dec=39,
+            )
+    """
+    eq = ICRS(
+        ra=ra*u.deg,
+        dec=dec*u.deg
+    )
     return eq.ra.deg, eq.dec.deg
 # ============================================================= #
 
@@ -160,6 +220,56 @@ def to_radec(alt, az, time, location):
 
 
 # ============================================================= #
+# ------------------------- to_altaz -------------------------- #
+# ============================================================= #
+def to_altaz(ra, dec, time, location):
+    """ Transform altaz coordinates to ICRS equatorial system
+        
+        :param radec:
+            Equatorial coordinates
+        :type altaz: :class:`astropy.coordinates.ICRS`
+        :param time:
+            Time at which the local coordinates should be 
+            computed. It can either be provided as an 
+            :class:`astropy.time.Time` object or a string in ISO
+            or ISOT format.
+        :type time: str, :class:`astropy.time.Time`
+
+        :returns: :class:`astropy.coordinates.AltAz` object
+        :rtype: :class:`astropy.coordinates.AltAz`
+
+        :Example:
+        
+        >>> from nenupysim.astro import eq_coord
+        >>> radec = eq_coord(
+                ra=51,
+                dec=39,
+            )
+    """
+    altaz_frame = AltAz(
+        obstime=time,
+        location=location
+    )
+    eq = ICRS(
+        ra=ra*u.deg,
+        dec=dec*u.deg
+    )
+    altaz = eq.transform_to(altaz_frame)
+    return altaz
+# ============================================================= #
+
+
+# ============================================================= #
+# -------------------------- to_gal --------------------------- #
+# ============================================================= #
+def to_gal(src):
+    """ Convert an astorpy source to galactic cooridnates
+    """
+    return src.transform_to(Galactic)
+# ============================================================= #
+
+
+# ============================================================= #
 # --------------------------- rotz ---------------------------- #
 # ============================================================= #
 def rotz(array, angle):
@@ -199,3 +309,15 @@ def wavelength(freq):
 # ============================================================= #
 
 
+# ============================================================= #
+# ------------------------ ref_location ----------------------- #
+# ============================================================= #
+def ref_location():
+    """
+    """
+    return EarthLocation(
+        lat=0*u.deg,
+        lon=-90*u.deg,
+        height=0*u.m
+    )
+# ============================================================= #

@@ -5,5 +5,5 @@ from .filter import *
 from .grid import *
 from .dirty import *
 from .weight import *
-
+from .sphmap import *
 
