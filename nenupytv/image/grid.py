@@ -54,7 +54,8 @@ class Grid(object):
         freq,
         fov,
         conv_filter=AAFilter(),
-        cellsize=None
+        cellsize=None,
+        robust=0.
         ):
         self.nsize = None
         self.fov = fov
@@ -63,8 +64,11 @@ class Grid(object):
         self.freq = freq
         self.filter = conv_filter
         self.cellsize = cellsize
+        self.robust = robust
 
 
+    # --------------------------------------------------------- #
+    # --------------------- Getter/Setter --------------------- #
     @property
     def _ovsmpl(self):
         """ Filter oversampling
@@ -136,14 +140,24 @@ class Grid(object):
                 (self.vis.shape[3], self.nsize, self.nsize),
                 dtype='complex64'
             )
+            self._meas_w = np.zeros(
+                (self.nsize, self.nsize),
+                dtype='float'
+            )
             # for deconvolution the PSF should be 2x size of the image (see 
             # Hogbom CLEAN for details), one grid for the sampling function:
             self.sampling = np.zeros(
                 (2*self.nsize, 2*self.nsize),
                 dtype='complex64'
             )
+            self._samp_w = np.zeros(
+                (2*self.nsize, 2*self.nsize),
+                dtype='float'
+            )
 
 
+    # --------------------------------------------------------- #
+    # ------------------------ Methods ------------------------ #
     def populate(self):
         """
         """
@@ -184,17 +198,6 @@ class Grid(object):
                 dv + self.nsize // 2 - self._hsup < 0 or
                 du + self.nsize // 2 - self._hsup < 0):
                 continue
-            
-            # yield (
-            #     du,
-            #     dv,
-            #     fu_offset,
-            #     fv_offset,
-            #     du_psf,
-            #     dv_psf,
-            #     fu_offset_psf,
-            #     fv_offset_psf
-            # )
 
             for conv_v in self._filter_idx:
                 v_tap = self._ftaps[conv_v * self._ovsmpl + fv_offset]
@@ -215,8 +218,39 @@ class Grid(object):
                     
                     for p in range(self.vis.shape[3]):
                         self.measurement[p, grid_v, grid_u] += self.vis[0, 0, vis_bl, p] * conv_weight
+                        # self._meas_w[grid_v, grid_u] += 1
+                        self._meas_w[grid_v, grid_u] += 1. * conv_weight
                     # assuming the PSF is the same for different correlations:
                     self.sampling[grid_v_psf, grid_u_psf] += (1+0.0j) * conv_weight_psf
+                    # self._samp_w[grid_v_psf, grid_u_psf] += 1
+                    self._samp_w[grid_v_psf, grid_u_psf] += 1. * conv_weight_psf
+
+        self._compute_weights()
+        return
+
+    # --------------------------------------------------------- #
+    # ----------------------- Internal ------------------------ #
+    def _compute_weights(self):
+        """
+        """
+        # nbsl = self.uvw.size / 3
+        # bsl_time = (2.*nbsl*1) # one time step
+        # num = (5.*10.**(-self.robust))**2.*bsl_time
+        # meas_f = num/np.sum(self._meas_w**2.)
+        # samp_f = num/np.sum(self._samp_w**2.)
+
+        # self.meas_weighted = self._meas_w / (1 + self._meas_w * meas_f)
+        # self.samp_weighted = self._samp_w / (1 + self._samp_w * samp_f)
+
+        factor = (5. * 10.**(-self.robust) )**2
+        f = factor / (np.sum(self._meas_w**2.) / np.sum(self._meas_w))
+        self.meas_weights = self._meas_w / (1 + self._meas_w * f)
+        self.meas_weights /= self.meas_weights.max()
+
+        f = factor / (np.sum(self._samp_w**2.) / np.sum(self._samp_w))
+        self.samp_weights = self._samp_w / (1 + self._samp_w * f)
+        self.samp_weights /= self.samp_weights.max()
+        return
 # ============================================================= #
 
 

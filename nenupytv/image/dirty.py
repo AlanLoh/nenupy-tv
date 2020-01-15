@@ -16,6 +16,8 @@ __all__ = [
 import numpy as np
 
 from nenupytv.image import Grid
+from nenupytv.read import Crosslets
+from nenupytv.astro import astro_image, eq_zenith
 
 
 # ============================================================= #
@@ -25,8 +27,9 @@ class Dirty(object):
     """
     """
 
-    def __init__(self, grid):
+    def __init__(self, grid, crosslets):
         self.grid = grid
+        self.crosslets = crosslets
         self.dirty = np.zeros(
             grid.measurement.shape,
             dtype=grid.measurement.dtype
@@ -48,35 +51,88 @@ class Dirty(object):
         return
 
 
+    @property
+    def crosslets(self):
+        return self._crosslets
+    @crosslets.setter
+    def crosslets(self, c):
+        if not isinstance(c, Crosslets):
+            raise TypeError(
+                "Expected a Crosslet object"
+            )    
+        self._crosslets = c
+        return
+
+
+    @property
+    def i(self):
+        """ Stokes I
+        """
+        return np.abs(self.dirty[0, :, :] + self.dirty[3, :, :])
+
+
+    @property
+    def q(self):
+        """ Stokes Q
+        """
+        return np.abs(self.dirty[0, :, :] - self.dirty[3, :, :])
+
+    @property
+    def u(self):
+        """ Stokes U
+        """
+        return np.abs(self.dirty[1, :, :] + self.dirty[2, :, :])
+
+    @property
+    def v(self):
+        """ Stokes V
+        """
+        return np.abs(-1.j*(self.dirty[1, :, :] - self.dirty[2, :, :]))
+    
+
+
     # --------------------------------------------------------- #
     # ------------------------ Methods ------------------------ #
     def compute(self):
         """
         """
         for p in range(self.grid.vis.shape[3]):
-            vis = np.fft.ifftshift(self.grid.measurement[p, ...])
+            # vis = np.fft.ifftshift(self.grid.measurement[p, ...])
+            vis = np.fft.ifftshift(self.grid.measurement[p, ...] * self.grid.meas_weights)
             self.dirty[p, ...] = np.fft.fftshift(np.fft.ifft2(vis))
         return
 
 
-    def plot(self, **kwargs):
+    def plot(self, stokes='I', **kwargs):
         """
         """
-        import matplotlib.pyplot as plt
-        image = np.abs(
-            np.sqrt(self.dirty[0, :, :]**2. + self.dirty[3, :, :]**2)
+        start = self._crosslets.time[0]
+        stop = self._crosslets.time[-1]
+        ra_zen, dec_zen = eq_zenith(
+            time=start + (stop - start)/2,
         )
-        im = plt.imshow(
-            image,
-            origin='lower',
-            aspect='equal',
-            cmap='YlGnBu_r',
+        resol = np.degrees(self.grid.resol.value)
+        npix = self.grid.nsize
+        
+        # Stokes (0: XX, 1: XY, 2: YX, 3: YY)
+        if stokes.lower() == 'i':
+            image = self.i
+        elif stokes.lower() == 'q':
+            image = self.q
+        elif stokes.lower() == 'u':
+            image = self.u
+        elif stokes.lower() == 'v':
+            image = self.v
+        
+        astro_image(
+            image=image,
+            center=(ra_zen, dec_zen),
+            npix=npix,
+            resol=resol,
             **kwargs
         )
-        plt.colorbar(im)
-        plt.xlabel('RA')
-        plt.ylabel('Dec')
         return
+
 
     # --------------------------------------------------------- #
     # ----------------------- Internal ------------------------ #

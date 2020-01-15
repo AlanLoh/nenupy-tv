@@ -52,8 +52,10 @@ class PSF(object):
     def compute(self):
         """
         """
-        sampling = np.fft.ifftshift(self.grid.sampling)
+        # sampling = np.fft.ifftshift(self.grid.sampling)
+        sampling = np.fft.ifftshift(self.grid.samp_weights)
         self.psf = np.fft.fftshift(np.fft.ifft2(sampling))
+        self.psf /= self.psf.max()
         return
 
 
@@ -61,6 +63,7 @@ class PSF(object):
         """
         """
         import matplotlib.pyplot as plt
+        fig = plt.figure(figsize=(7, 7))
         im = plt.imshow(
             np.abs(self.psf),
             origin='lower',
