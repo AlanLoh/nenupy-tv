@@ -15,10 +15,12 @@ __all__ = [
     'ho_zenith',
     'eq_zenith',
     'radec',
+    'radec_hd',
     'eq_coord',
     'to_radec',
     'to_altaz',
     'to_gal',
+    'to_lmn',
     'rotz',
     'wavelength',
     'ref_location',
@@ -186,7 +188,7 @@ def eq_zenith(time, location=None):
 
 
 # ============================================================= #
-# ------------------------- eq_coord -------------------------- #
+# --------------------------- radec --------------------------- #
 # ============================================================= #
 def radec(ra, dec):
     """ Equatorial coordinates
@@ -212,6 +214,19 @@ def radec(ra, dec):
     return ICRS(
         ra=ra*u.deg,
         dec=dec*u.deg
+    )
+# ============================================================= #
+
+
+# ============================================================= #
+# ------------------------- radec_hd -------------------------- #
+# ============================================================= #
+def radec_hd(hms_dms):
+    """
+    """
+    return SkyCoord(
+        hms_dms,
+        unit=[u.hourangle, u.deg]
     )
 # ============================================================= #
 
@@ -351,6 +366,24 @@ def to_gal(src):
 
 
 # ============================================================= #
+# -------------------------- to_gal --------------------------- #
+# ============================================================= #
+def to_lmn(ra, dec, ra_0, dec_0):
+    """
+    """
+    ra = np.radians(ra)
+    dec = np.radians(dec)
+    ra_0 = np.radians(ra_0)
+    dec_0 = np.radians(dec_0)
+    ra_delta = ra - ra_0
+    l = np.cos(dec)*np.sin(ra_delta)
+    m = np.sin(dec)*np.cos(dec_0) - np.cos(dec)*np.sin(dec_0)*np.cos(ra_delta)
+    n = np.sqrt(1 - l**2 - m**2)
+    return l, m, n
+# ============================================================= #
+
+
+# ============================================================= #
 # --------------------------- rotz ---------------------------- #
 # ============================================================= #
 def rotz(array, angle):
@@ -449,7 +482,8 @@ def ateam():
         'cas a': (350.850000, +58.815000),
         'her a': (252.783433, +04.993031),
         'hyd a': (139.523546, -12.095553),
-        'tau a': (83.63308, +22.01450)
+        'tau a': (83.63308, +22.01450),
+        '3c 380' : (277.3824220006990, +48.7461552266057)
     }
     return src_radec
 # ============================================================= #
@@ -458,7 +492,7 @@ def ateam():
 # ============================================================= #
 # ------------------------ astro_image ------------------------ #
 # ============================================================= #
-def astro_image(image, center, npix, resol, savefile=None, **kwargs):
+def astro_image(image, center, npix, resol, savefile=None, sources=False, colorbar=False, gal_plane=False, **kwargs):
     """
     """
     import matplotlib.pyplot as plt
@@ -473,16 +507,18 @@ def astro_image(image, center, npix, resol, savefile=None, **kwargs):
     w.wcs.crpix = [npix/2, npix/2]
     w.wcs.cdelt = np.array([resol, resol])
     w.wcs.crval = [center[0], center[1]]
-    w.wcs.ctype = ["RA---TAN", "DEC--TAN"]
+    w.wcs.ctype = ['RA---AIR', 'DEC--AIR']
 
     fig = plt.figure(figsize=(10, 10))
     ax = plt.subplot(projection=w)
-    ax.imshow(
+    im = ax.imshow(
         image,
         origin='lower',
         aspect='equal',
         **kwargs
     )
+    if colorbar:
+        plt.colorbar(im, ax=ax)
 
     ax.coords.grid(True, color='white', ls='solid', alpha=0.5)
     axra = ax.coords[0]
@@ -493,6 +529,37 @@ def astro_image(image, center, npix, resol, savefile=None, **kwargs):
     axdec.set_axislabel('Dec')
     axdec.set_major_formatter('d')
     axdec.set_ticks(number=10)
+
+    if sources:
+        from astroquery.vizier import Vizier
+        from astropy.coordinates import SkyCoord
+        import astropy.units as un
+        Vizier.ROW_LIMIT = -1
+        catalog_list = Vizier.find_catalogs('VIII/1A')
+        catalogs = Vizier.get_catalogs(catalog_list.keys())
+        cat_3c = catalogs[0]
+        ra_zen = center[0]
+        dec_zen = center[1]
+        zenith = SkyCoord(ra_zen * un.deg, dec_zen * un.deg)
+        maxjy = np.max(np.log10(cat_3c['S159MHz']))
+        for i in range(len(cat_3c)):
+            src_3c = SkyCoord(
+                cat_3c['RA1950'][i],
+                cat_3c['DE1950'][i],
+                unit=(un.hourangle, un.deg),
+                equinox='B1950'
+            )
+            if zenith.separation(src_3c).deg < 32:
+                ax.scatter(
+                    src_3c.ra.deg,
+                    src_3c.dec.deg,
+                    transform=ax.get_transform('icrs'),
+                    s=np.log10(cat_3c['S159MHz'][i])/maxjy * 500,
+                    edgecolor='white',
+                    facecolor='none',
+                    #alpha=np.log10(cat_3c['S159MHz'][i])/maxjy
+                ) 
+
 
     if savefile is None:
         plt.show()

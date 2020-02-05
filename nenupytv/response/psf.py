@@ -14,7 +14,7 @@ __all__ = [
 
 import numpy as np
 
-from nenupytv.image import Grid
+from nenupytv.image import Grid, Grid_Simple
 
 
 # ============================================================= #
@@ -39,7 +39,7 @@ class PSF(object):
         return self._grid
     @grid.setter
     def grid(self, g):
-        if not isinstance(g, Grid):
+        if not isinstance(g, (Grid, Grid_Simple)):
             raise TypeError(
                 'Grid object expected'
             )
@@ -63,15 +63,15 @@ class PSF(object):
         """
         """
         import matplotlib.pyplot as plt
-        fig = plt.figure(figsize=(7, 7))
+        fig = plt.figure(figsize=(10, 10))
         im = plt.imshow(
-            np.abs(self.psf),
+            np.real(self.psf),
             origin='lower',
             aspect='equal',
             cmap='YlGnBu_r',
             **kwargs
         )
-        plt.colorbar(im)
+        # plt.colorbar(im)
         return
 
 

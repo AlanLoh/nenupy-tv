@@ -18,6 +18,8 @@ __all__ = [
 
 
 import warnings
+from os.path import isfile
+from urllib.request import urlopen
 import numpy as np
 try:
     from astroquery.ned import Ned
@@ -25,7 +27,7 @@ try:
 except:
     NED_ENABLED = False
 
-from nenupytv.astro import ateam, radec
+from nenupytv.astro import ateam, radec, radec_hd
 
 
 default = {
@@ -45,12 +47,21 @@ class Skymodel(object):
     """
     """
 
-    def __init__(self, center, radius, freq):
+    def __init__(self, center, radius, freq, method='gsm', cutoff=100.):
         self.center = radec(ra=center[0], dec=center[1])
         self.radius = radius
         self.frequency = freq
-        self.sources = self._ateam_in_fov()
-        self.fluxes = self._ateam_flux()
+        self.cutoff = cutoff # in Jy
+        if method.lower() == 'manual':
+            self.sources = self._ateam_in_fov()
+            self.fluxes = self._ateam_flux()
+            for key in self.sources['key']:
+                if self.fluxes[key] < self.cutoff:
+                    del self.sources[key]
+                    del self.fluxes[key]
+        elif method.lower() == 'gsm':
+            self.gsmfile = ''
+            self.sources, self.fluxes = self.from_gsm()
 
 
     # --------------------------------------------------------- #
@@ -71,6 +82,47 @@ class Skymodel(object):
 
     # --------------------------------------------------------- #
     # ------------------------ Methods ------------------------ #
+    def save_from_gsm(self):
+        """ Make a request and save the result in a file to
+            speed up the reading time
+        """
+
+
+    def from_gsm(self):
+        """ NEED TO EXTRAPOLATE AT THE RIGHT FREQUENCY
+            CURRENTLY OK FOR 60 MHz
+        """
+        if not isfile(self.gsmfile):
+            self.save_from_gsm()
+
+        infield = {}
+        command = [
+            'https://lcs165.lofar.eu/cgi-bin/gsmv1.cgi?',
+            'coord=' + str(self.center.ra.deg),
+            ',' + str(self.center.dec.deg),
+            '&radius=' + str(self.radius),
+            '&cutoff=' + str(self.cutoff),
+            '&unit=deg&deconv=y',
+        ]
+        url = ''.join(command)
+        with urlopen(url) as response:
+            response = response.read().decode('utf8')
+            sources = response.split('\n')[3:]
+
+        infield = {}
+        fluxes = {}
+        for source in sources:
+            if source == '':
+                continue
+            src_desc = source.split(', ')
+            src_name = src_desc[0]
+            fluxes[src_name] = float(src_desc[4])
+            src = radec_hd(
+                src_desc[2] + ' ' + src_desc[3].replace('.', ':', 2)
+            )
+            infield[src_name] = radec(ra=src.ra.deg, dec=src.dec.deg)
+        
+        return infield, fluxes
 
 
     # --------------------------------------------------------- #

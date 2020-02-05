@@ -15,7 +15,7 @@ __all__ = [
 
 import numpy as np
 
-from nenupytv.image import Grid
+from nenupytv.image import Grid, Grid_Simple
 from nenupytv.read import Crosslets
 from nenupytv.astro import astro_image, eq_zenith
 
@@ -27,7 +27,7 @@ class Dirty(object):
     """
     """
 
-    def __init__(self, grid, crosslets):
+    def __init__(self, grid, crosslets=None):
         self.grid = grid
         self.crosslets = crosslets
         self.dirty = np.zeros(
@@ -43,7 +43,7 @@ class Dirty(object):
         return self._grid
     @grid.setter
     def grid(self, g):
-        if not isinstance(g, Grid):
+        if not isinstance(g, (Grid, Grid_Simple)):
             raise TypeError(
                 'Grid object expected'
             )
@@ -68,26 +68,26 @@ class Dirty(object):
     def i(self):
         """ Stokes I
         """
-        return np.abs(self.dirty[0, :, :] + self.dirty[3, :, :])
+        return np.real(self.dirty[0, :, :] + self.dirty[3, :, :]) * 0.5
 
 
     @property
     def q(self):
         """ Stokes Q
         """
-        return np.abs(self.dirty[0, :, :] - self.dirty[3, :, :])
+        return np.real(self.dirty[0, :, :] - self.dirty[3, :, :]) * 0.5
 
     @property
     def u(self):
         """ Stokes U
         """
-        return np.abs(self.dirty[1, :, :] + self.dirty[2, :, :])
+        return np.real(self.dirty[1, :, :] + self.dirty[2, :, :]) * 0.5
 
     @property
     def v(self):
         """ Stokes V
         """
-        return np.abs(-1.j*(self.dirty[1, :, :] - self.dirty[2, :, :]))
+        return np.abs(-.5j*(self.dirty[1, :, :] - self.dirty[2, :, :]))
     
 
 
@@ -96,14 +96,13 @@ class Dirty(object):
     def compute(self):
         """
         """
-        for p in range(self.grid.vis.shape[3]):
-            # vis = np.fft.ifftshift(self.grid.measurement[p, ...])
+        for p in range(self.grid.measurement.shape[0]):
             vis = np.fft.ifftshift(self.grid.measurement[p, ...] * self.grid.meas_weights)
             self.dirty[p, ...] = np.fft.fftshift(np.fft.ifft2(vis))
         return
 
 
-    def plot(self, stokes='I', **kwargs):
+    def plot(self, stokes='I', sources=False, cbar=False, **kwargs):
         """
         """
         start = self._crosslets.time[0]
@@ -129,6 +128,8 @@ class Dirty(object):
             center=(ra_zen, dec_zen),
             npix=npix,
             resol=resol,
+            sources=sources,
+            colorbar=cbar,
             **kwargs
         )
         return

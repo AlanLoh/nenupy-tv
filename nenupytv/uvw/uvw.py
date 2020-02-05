@@ -613,6 +613,14 @@ class SphUVW(object):
         return np.max(np.abs(self._uvw[..., 1]))
 
 
+    @property
+    def uvdist(self):
+        """ UV distance in lambdas
+        """
+        return np.sqrt(np.sum(self._uvw**2, axis=-1))
+    
+
+
     # --------------------------------------------------------- #
     # ------------------------ Methods ------------------------ #
     def wave_vector(self, frequency):
@@ -664,6 +672,39 @@ class SphUVW(object):
                 [ 0., 0., 1.]    
             ])
             uvw[i, ...] = np.dot(rot, self.bsl.T).T[np.newaxis]
+
+            if coord is not None:
+                ra, dec = eq_zenith(
+                    time=time,
+                    location=self.obsloc
+                    )
+                if coord == 'zenith':
+                    coord = (ra, dec)
+                def rotMatrix(r, d):
+                    """ r: ra in radians
+                        d: dec in radians
+                    """
+                    w = np.array([
+                        [  np.sin(r)*np.cos(d) ,  np.cos(r)*np.cos(d) , np.sin(d) ]
+                    ]).T
+                    v = np.array([
+                        [ -np.sin(r)*np.sin(d) , -np.cos(r)*np.sin(d) , np.cos(d) ]
+                    ]).T
+                    u = np.array([
+                        [  np.cos(r)           , -np.sin(r)           , 0.        ]
+                    ]).T
+                    rot_matrix = np.concatenate([u, v, w], axis=-1)
+                    return rot_matrix
+                final_trans = rotMatrix(
+                    r=np.radians(coord[0]),
+                    d=np.radians(coord[1])
+                )
+                original_trans = rotMatrix(
+                    r=np.radians(ra),
+                    d=np.radians(dec)
+                )
+                total_trans = np.dot(final_trans.T, original_trans)
+                uvw[i, ...] = np.dot(uvw[i, ...], total_trans.T)
 
         # Reshape to get cross-correlation matrices
         xtri, ytri = np.triu_indices(self.instru.n_ant)
@@ -740,7 +781,7 @@ class SphUVW(object):
         import matplotlib.pyplot as plt
         from mpl_toolkits.axes_grid1 import make_axes_locatable
 
-        fig, ax = plt.subplots(figsize=(7, 7))
+        fig, ax = plt.subplots(figsize=(10, 10))
 
         u, v = self._uvplot(freq=freq)
 

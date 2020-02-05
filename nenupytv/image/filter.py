@@ -42,7 +42,7 @@ class AAFilter(object):
     def __init__(self,
         half_support=3,
         oversampling_factor=63,
-        ftype='sinc'
+        ftype='sinc'#'''ones',#'sinc',#'sinc'
         ):
         self.half_sup = half_support
         self.oversample = oversampling_factor
@@ -57,7 +57,10 @@ class AAFilter(object):
                 np.zeros([len(taps)])
             )
         elif ftype == "sinc":
-            self.filter_taps = np.sinc(taps)
+            self.filter_taps = np.sinc(taps) 
+            #self.filter_taps = np.sinc(np.radians(taps))
+        elif ftype == 'ones':
+            self.filter_taps = np.ones(taps.size)
         elif ftype == "gaussian_sinc":
             alpha_1=1.55
             alpha_2=2.52

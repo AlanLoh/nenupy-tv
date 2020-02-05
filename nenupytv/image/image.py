@@ -70,7 +70,7 @@ class Image(object):
             )
         if np.all(p.psf == 0):
             p.compute() 
-        self._psf = np.abs(p.psf)
+        self._psf = np.real(p.psf)
         return
 
 
@@ -125,7 +125,7 @@ class Image(object):
         # Convolve model and clean beam
         model_fft = ifftshift(fft2(fftshift(self.model)))
         clean_beam_fft = ifftshift(fft2(fftshift(self._clean_beam())))
-        self.image = np.abs(
+        self.image = np.real(
             fftshift(ifft2(ifftshift(model_fft * clean_beam_fft)))
         ) + self.residuals
 
