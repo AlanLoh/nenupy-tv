@@ -13,6 +13,7 @@ __all__ = [
 
 
 import numpy as np
+from astropy.modeling import models, fitting
 
 from nenupytv.image import Grid, Grid_Simple
 
@@ -30,6 +31,7 @@ class PSF(object):
             grid.sampling.shape,
             dtype=grid.sampling.dtype
         )
+        self.clean_beam = None
 
 
     # --------------------------------------------------------- #
@@ -56,6 +58,8 @@ class PSF(object):
         sampling = np.fft.ifftshift(self.grid.samp_weights)
         self.psf = np.fft.fftshift(np.fft.ifft2(sampling))
         self.psf /= self.psf.max()
+
+        self.clean_beam = self._clean_beam()
         return
 
 
@@ -77,6 +81,36 @@ class PSF(object):
 
     # --------------------------------------------------------- #
     # ----------------------- Internal ------------------------ #
+    def _clean_beam(self):
+        """
+        """
+        psf = self.psf.real.copy()
+
+        # Put most of the PSF to 0 to help the fit
+        psf[psf <= np.std(psf)] = 0 
+        nsize = int(psf.shape[0])
+
+        fit_init = models.Gaussian2D(
+            amplitude=1,
+            x_mean=nsize/2,
+            y_mean=nsize/2,
+            x_stddev=0.2,
+            y_stddev=0.2
+        )
+
+        fit_algo = fitting.LevMarLSQFitter()
+        yi, xi = np.indices(psf.shape)
+
+        gaussian = fit_algo(fit_init, xi, yi, psf)
+
+        clean_beam = gaussian(xi, yi)
+        clean_beam /= clean_beam.max()
+        
+        return clean_beam[
+            int(nsize/2/2):int(nsize/2*3/2),
+            int(nsize/2/2):int(nsize/2*3/2)
+        ]
+
 
 
 # ============================================================= #

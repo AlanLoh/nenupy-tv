@@ -102,14 +102,17 @@ class Dirty(object):
         return
 
 
-    def plot(self, stokes='I', sources=False, cbar=False, **kwargs):
+    def plot(self, stokes='I', sources=False, cbar=False, center=None, **kwargs):
         """
         """
         start = self._crosslets.time[0]
         stop = self._crosslets.time[-1]
-        ra_zen, dec_zen = eq_zenith(
-            time=start + (stop - start)/2,
-        )
+        if center is None:
+            ra, dec = eq_zenith(
+                time=start + (stop - start)/2,
+            )
+        else:
+            ra, dec = center
         resol = np.degrees(self.grid.resol.value)
         npix = self.grid.nsize
         
@@ -125,10 +128,11 @@ class Dirty(object):
         
         astro_image(
             image=image,
-            center=(ra_zen, dec_zen),
+            center=(ra, dec),
             npix=npix,
             resol=resol,
-            sources=sources,
+            time=start + (stop - start)/2,
+            show_sources=sources,
             colorbar=cbar,
             **kwargs
         )

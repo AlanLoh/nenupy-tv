@@ -1,0 +1,107 @@
+#! /usr/bin/python3
+# -*- coding: utf-8 -*-
+
+
+"""
+"""
+
+
+__author__ = 'Alan Loh'
+__copyright__ = 'Copyright 2020, nenupytv'
+__credits__ = ['Alan Loh']
+__maintainer__ = 'Alan'
+__email__ = 'alan.loh@obspm.fr'
+__status__ = 'Production'
+
+
+import argparse
+
+from nenupytv.image import Visibilities
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        '-o',
+        '--obs',
+        type=str,
+        help="NenuFAR-TV file",
+        required=True
+    )
+    parser.add_argument(
+        '-s',
+        '--savefile',
+        type=str,
+        help="Savefile in png",
+        required=True
+    )
+    parser.add_argument(
+        '-f',
+        '--fov',
+        type=float,
+        default=60,
+        help="Field of view in degrees",
+        required=False
+    )
+    parser.add_argument(
+        '-r',
+        '--robust',
+        type=float,
+        default=-2,
+        help="Robust factor",
+        required=False
+    )
+    parser.add_argument(
+        '-n',
+        '--nsig',
+        type=float,
+        default=5,
+        help="N sigma above mean where data are flagged",
+        required=False
+    )
+    parser.add_argument(
+        '-c',
+        '--cutoff',
+        type=float,
+        default=50,
+        help="Threshold in Jy below which sources are not included in the skymodel",
+        required=False
+    )
+    parser.add_argument(
+        '--uvmin',
+        type=float,
+        default=7,
+        help="Minimal UV distance in lambdas",
+        required=False
+    )
+    parser.add_argument(
+        '--uvmax',
+        type=float,
+        default=None,
+        help="Maximal UV distance in lambdas",
+        required=False
+    )
+
+    args = parser.parse_args()
+
+    visibility = Visibilities(args.obs)
+    visibility.flagdata(nsig=args.nsig)
+    model = visibility.predict(
+        fov=args.fov,
+        cutoff=args.cutoff
+    )
+    cal_vis = visibility.calibrate(model)
+    dirty = visibility.make_dirty(
+        vis=cal_vis,
+        fov=args.fov,
+        robust=args.robust,
+        uvwave_min=args.uvmin,
+        uvwave_max=args.uvmax
+    )
+    visibility.clean(
+        dirty=dirty,
+        pngfile=args.savefile,
+        gainfactor=0.1,
+        niter=1000,
+        threshold=5
+    )

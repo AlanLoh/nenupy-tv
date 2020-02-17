@@ -177,6 +177,9 @@ class Grid(object):
             u = self.uvw[vis_bl, 0] * np.radians(self.fov)
             v = self.uvw[vis_bl, 1] * np.radians(self.fov)
 
+            if np.ma.is_masked(u) or np.ma.is_masked(v):
+                continue
+
             du = int(np.round(u))
             dv = int(np.round(v))
             fu_offset = int(

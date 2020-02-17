@@ -11,13 +11,16 @@ setup(
     include_package_data = True,
     install_requires = ['numpy', 'astropy'],
     python_requires = '>=3.5',
-    scripts = [],
+    scripts = ['bin/nenufartv'],
     version = nenupytv.__version__,
     description = 'NenuFAR-TV Python package',
     url = 'https://github.com/AlanLoh/nenupy-tv.git',
     author = metadata['author'],
     author_email = metadata['email'],
     license = 'MIT',
+    classifiers=[
+        "Programming Language :: Python :: 3",
+    ],
     zip_safe = False
     )
 

@@ -21,6 +21,7 @@ __all__ = [
     'to_altaz',
     'to_gal',
     'to_lmn',
+    'rephase',
     'rotz',
     'wavelength',
     'ref_location',
@@ -40,7 +41,8 @@ from astropy.coordinates import (
     AltAz,
     Galactic,
     ICRS,
-    get_body
+    get_body,
+    solar_system_ephemeris
 )
 from astropy.constants import c as lspeed
 from astropy.wcs import WCS
@@ -384,6 +386,48 @@ def to_lmn(ra, dec, ra_0, dec_0):
 
 
 # ============================================================= #
+# -------------------------- rephase -------------------------- #
+# ============================================================= #
+def rephase(ra, dec, time, loc, dw=False):
+    """
+    """
+    raz, decz = eq_zenith(
+        time=time,
+        location=loc
+        )
+    def rotMatrix(r, d):
+        """ r: ra in radians
+            d: dec in radians
+        """
+        w = np.array([
+            [  np.sin(r)*np.cos(d) ,  np.cos(r)*np.cos(d) , np.sin(d) ]
+        ]).T
+        v = np.array([
+            [ -np.sin(r)*np.sin(d) , -np.cos(r)*np.sin(d) , np.cos(d) ]
+        ]).T
+        u = np.array([
+            [  np.cos(r)           , -np.sin(r)           , 0.        ]
+        ]).T
+        rot_matrix = np.concatenate([u, v, w], axis=-1)
+        return rot_matrix, w
+    final_trans, wnew = rotMatrix(
+        r=np.radians(ra),
+        d=np.radians(dec)
+    )
+    original_trans, wold = rotMatrix(
+        r=np.radians(raz),
+        d=np.radians(decz)
+    )
+    total_trans = np.dot(final_trans.T, original_trans)
+
+    if dw:
+        return total_trans, original_trans, final_trans, wold-wnew
+    else:
+        return total_trans
+# ============================================================= #
+
+
+# ============================================================= #
 # --------------------------- rotz ---------------------------- #
 # ============================================================= #
 def rotz(array, angle):
@@ -456,12 +500,13 @@ def radio_sources(time):
 
     with solar_system_ephemeris.set('builtin'):
         src_radec = {
-            'vira': (187.70593075, +12.39112331),
-            'cyga': (299.86815263, +40.73391583),
-            'casa': (350.850000, +58.815000),
-            'hera': (252.783433, +04.993031),
-            'hyda': (139.523546, -12.095553),
-            'taua': (83.63308, +22.01450),
+            'vir a': (187.70593075, +12.39112331),
+            'cyg a': (299.86815263, +40.73391583),
+            'cas a': (350.850000, +58.815000),
+            'her a': (252.783433, +04.993031),
+            'hyd a': (139.523546, -12.095553),
+            'tau a': (83.63308, +22.01450),
+            '3c 380': (277.3824220006990, +48.7461552266057),
             'sun': solarsyst_eq('sun', time),
             'moon': solarsyst_eq('moon', time),
             'jupiter': solarsyst_eq('jupiter', time),
@@ -492,7 +537,18 @@ def ateam():
 # ============================================================= #
 # ------------------------ astro_image ------------------------ #
 # ============================================================= #
-def astro_image(image, center, npix, resol, savefile=None, sources=False, colorbar=False, gal_plane=False, **kwargs):
+def astro_image(
+        image,
+        center,
+        npix,
+        resol,
+        time,
+        pngfile=None,
+        fitsfile=None,
+        show_sources=False,
+        colorbar=False,
+        gal_plane=False,
+        **kwargs):
     """
     """
     import matplotlib.pyplot as plt
@@ -530,40 +586,72 @@ def astro_image(image, center, npix, resol, savefile=None, sources=False, colorb
     axdec.set_major_formatter('d')
     axdec.set_ticks(number=10)
 
-    if sources:
-        from astroquery.vizier import Vizier
-        from astropy.coordinates import SkyCoord
-        import astropy.units as un
-        Vizier.ROW_LIMIT = -1
-        catalog_list = Vizier.find_catalogs('VIII/1A')
-        catalogs = Vizier.get_catalogs(catalog_list.keys())
-        cat_3c = catalogs[0]
-        ra_zen = center[0]
-        dec_zen = center[1]
-        zenith = SkyCoord(ra_zen * un.deg, dec_zen * un.deg)
-        maxjy = np.max(np.log10(cat_3c['S159MHz']))
-        for i in range(len(cat_3c)):
-            src_3c = SkyCoord(
-                cat_3c['RA1950'][i],
-                cat_3c['DE1950'][i],
-                unit=(un.hourangle, un.deg),
-                equinox='B1950'
+    # if sources:
+    #     from astroquery.vizier import Vizier
+    #     from astropy.coordinates import SkyCoord
+    #     import astropy.units as un
+    #     Vizier.ROW_LIMIT = -1
+    #     catalog_list = Vizier.find_catalogs('VIII/1A')
+    #     catalogs = Vizier.get_catalogs(catalog_list.keys())
+    #     cat_3c = catalogs[0]
+    #     ra_zen = center[0]
+    #     dec_zen = center[1]
+    #     zenith = SkyCoord(ra_zen * un.deg, dec_zen * un.deg)
+    #     maxjy = np.max(np.log10(cat_3c['S159MHz']))
+    #     for i in range(len(cat_3c)):
+    #         src_3c = SkyCoord(
+    #             cat_3c['RA1950'][i],
+    #             cat_3c['DE1950'][i],
+    #             unit=(un.hourangle, un.deg),
+    #             equinox='B1950'
+    #         )
+    #         if zenith.separation(src_3c).deg < 32:
+    #             ax.scatter(
+    #                 src_3c.ra.deg,
+    #                 src_3c.dec.deg,
+    #                 transform=ax.get_transform('icrs'),
+    #                 s=np.log10(cat_3c['S159MHz'][i])/maxjy * 500,
+    #                 edgecolor='white',
+    #                 facecolor='none',
+    #                 #alpha=np.log10(cat_3c['S159MHz'][i])/maxjy
+    #             )
+    if show_sources:
+        phase_center = radec(
+            ra=center[0],
+            dec=center[1]
+        )
+
+        srcs = radio_sources(time=time)
+
+        for k in srcs.keys():
+            src = radec(
+                ra=srcs[k][0],
+                dec=srcs[k][1]
             )
-            if zenith.separation(src_3c).deg < 32:
-                ax.scatter(
-                    src_3c.ra.deg,
-                    src_3c.dec.deg,
-                    transform=ax.get_transform('icrs'),
-                    s=np.log10(cat_3c['S159MHz'][i])/maxjy * 500,
-                    edgecolor='white',
-                    facecolor='none',
-                    #alpha=np.log10(cat_3c['S159MHz'][i])/maxjy
-                ) 
+            if phase_center.separation(src).deg > npix/2 * resol:
+                # Source not in FoV
+                continue
+            # ax.scatter(
+            #     src.ra.deg,
+            #     src.dec.deg,
+            #     s=100,
+            #     transform=ax.get_transform('icrs'),
+            #     edgecolor='white',
+            #     facecolor='none',
+            # )
+            ax.text(
+                src.ra.deg,
+                src.dec.deg,
+                k.title(),
+                transform=ax.get_transform('icrs'),
+                color='white'
+            )
 
-
-    if savefile is None:
+    if pngfile is None:
         plt.show()
     else:
-        plt.savefig(savefile, **kwargs)
+        plt.title('{}'.format(time.iso))
+        #plt.tight_layout()
+        plt.savefig(pngfile, **kwargs)
 # ============================================================= #
 

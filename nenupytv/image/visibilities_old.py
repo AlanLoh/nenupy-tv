@@ -21,7 +21,7 @@ from astropy.time import Time
 
 from nenupytv.read import Crosslets
 from nenupytv.uvw import SphUVW
-from nenupytv.astro import eq_zenith, to_lmn
+from nenupytv.astro import eq_zenith, to_lmn, rephase, nenufar_loc
 from nenupytv.calibration import Skymodel
 from nenupytv.image import Grid_Simple, Dirty
 
@@ -221,11 +221,27 @@ class Visibilities(object):
         return
 
 
-    def make_dirty(self, fov=60, robust=-2):
+    def make_dirty(self, fov=60, robust=-2, coord=None):
         """
         """
         avg_vis = np.mean(self.vis, axis=(0, 1))
         avg_uvw = np.mean(self.uvw, axis=(0, 1))
+
+        if coord is not None:
+            transfo, origtransfo, finaltransfo, dw = rephase(
+                ra=coord[0],
+                dec=coord[1],
+                time=self.time_mean,
+                loc=nenufar_loc(),
+                dw=True
+            )
+            # phase = np.dot( avg_uvw, np.dot( dw.T, origtransfo).T)
+            # dphi = np.exp( phase * 2 * np.pi * 1j)# / wavelength[idx1:idx2, chan])
+            # avg_vis *= dphi
+            # avg_uvw = np.dot(avg_uvw, transfo.T)
+
+            avg_uvw = np.dot(avg_uvw, origtransfo.T)#finaltransfo.T)
+            avg_vis *= np.exp( np.dot(avg_uvw, -dw) * 2 * np.pi * 1j)
 
         self.grid = Grid_Simple(
             vis=avg_vis,

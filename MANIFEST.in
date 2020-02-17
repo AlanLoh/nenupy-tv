@@ -1,1 +1,2 @@
 include nenupytv/instru/location_miniarrays.dat
+include nenupytv/calibration/lfsky.fits

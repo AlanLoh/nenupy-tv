@@ -7,4 +7,4 @@ from .dirty import *
 from .weight import *
 from .sphmap import *
 from .image import *
-
+from .visibilities import Visibilities

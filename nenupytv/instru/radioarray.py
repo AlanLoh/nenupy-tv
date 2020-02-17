@@ -35,6 +35,8 @@ class RadioArray(object):
         
         self.n_ant_total = 0
         self.n_ant = 0
+        self.triux = None
+        self.triuy = None
         self.tri_x = None
         self.tri_y = None
         
@@ -144,6 +146,9 @@ class RadioArray(object):
             self.n_ant,
             0
         )
+        self.triux, self.triuy = np.triu_indices(
+            self.n_ant
+        )
 
 
     @property
@@ -157,6 +162,22 @@ class RadioArray(object):
         """
         bsl = list(product(self.antennas, repeat=2))
         return np.array(bsl)
+
+
+    @property
+    def ant1(self):
+        """
+        """
+        ant1 = np.tile(self.antennas, (self.n_ant, 1))
+        return ant1.astype(int)
+
+
+    @property
+    def ant2(self):
+        """
+        """
+        ant2 = np.tile(self.antennas, (self.n_ant, 1)).T
+        return ant2.astype(int)
 
 
     # --------------------------------------------------------- #
