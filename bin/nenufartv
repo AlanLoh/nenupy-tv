@@ -36,6 +36,14 @@ if __name__ == "__main__":
         required=True
     )
     parser.add_argument(
+        '-S',
+        '--fitsfile',
+        type=str,
+        default=None,
+        help="Path (without file name) to save fits file as well",
+        required=False
+    )
+    parser.add_argument(
         '-f',
         '--fov',
         type=float,
@@ -101,6 +109,7 @@ if __name__ == "__main__":
     visibility.clean(
         dirty=dirty,
         pngfile=args.savefile,
+        fitsfile=args.fitsfile,
         gainfactor=0.1,
         niter=1000,
         threshold=5

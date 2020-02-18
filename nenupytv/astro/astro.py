@@ -31,6 +31,7 @@ __all__ = [
     ]
 
 
+from os import path
 import numpy as np
 from astropy.time import Time
 from astropy import units as u
@@ -659,6 +660,7 @@ def astro_image(
         plt.savefig(pngfile, **kwargs)
 
     if fitsfile is not None:
+        fitsfile = path.join(fitsfile, 'nenufartv_{}.fits'.format(time.isot.split('.')[0]))
         header = w.to_header()
         hdu = fits.PrimaryHDU(image, header=header)
         hdu.writeto(fitsfile, overwrite=True)
