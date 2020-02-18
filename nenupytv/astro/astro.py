@@ -46,7 +46,9 @@ from astropy.coordinates import (
 )
 from astropy.constants import c as lspeed
 from astropy.wcs import WCS
+from astropy.io import fits
 
+import nenupytv
 
 # ============================================================= #
 # ------------------------ nenufar_loc ------------------------ #
@@ -543,6 +545,7 @@ def astro_image(
         npix,
         resol,
         time,
+        freq=None,
         pngfile=None,
         fitsfile=None,
         show_sources=False,
@@ -571,6 +574,7 @@ def astro_image(
         image,
         origin='lower',
         aspect='equal',
+        interpolation='none',
         **kwargs
     )
     if colorbar:
@@ -653,5 +657,17 @@ def astro_image(
         plt.title('{}'.format(time.iso))
         #plt.tight_layout()
         plt.savefig(pngfile, **kwargs)
+
+    if fitsfile is not None:
+        header = w.to_header()
+        hdu = fits.PrimaryHDU(image, header=header)
+        hdu.writeto(fitsfile, overwrite=True)
+        fits.setval(fitsfile, 'INSTRU', value='NenuFAR')
+        fits.setval(fitsfile, 'SOFTWARE', value='nenupytv')
+        fits.setval(fitsfile, 'VERSION', value=nenupytv.__version__)
+        fits.setval(fitsfile, 'TIME', value=time.isot, comment='Time in UTC')
+        fits.setval(fitsfile, 'FREQUENC', value=freq, comment='Mean frequency in MHz')
+        fits.setval(fitsfile, 'STOKES', value='I')
+        fits.setval(fitsfile, 'CONTACT', value='alan.loh@obspm.fr')
 # ============================================================= #
 

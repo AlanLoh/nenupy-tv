@@ -304,7 +304,14 @@ class Visibilities(UVW):
         return dirty
 
 
-    def clean(self, dirty, pngfile=None, gainfactor=0.05, niter=10000, threshold=None, **kwargs):
+    def clean(self,
+            dirty,
+            pngfile=None,
+            fitsfile=None,
+            gainfactor=0.05,
+            niter=10000,
+            threshold=None,
+            **kwargs):
         """
         """
         if not isinstance(dirty, Dirty):
@@ -372,9 +379,11 @@ class Visibilities(UVW):
             npix=self.grid.nsize,
             resol=np.degrees(self.grid.resol.value),
             time=start + (stop - start)/2,
+            freq=np.mean(self.freq),
             show_sources=True,
             colorbar=False,
             pngfile=pngfile,
+            fitsfile=fitsfile,
             **kwargs
         )
         return
