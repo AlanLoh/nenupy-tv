@@ -430,7 +430,6 @@ class Visibilities(UVW):
                         axis=(0, 1)
                     )
                 )
-                di[np.arange(di.shape[0]), np.arange(di.shape[0])] = 0.
                 hdus.append(
                     fits.ImageHDU(
                         data=di,
