@@ -171,9 +171,13 @@ class Crosslets(object):
             yield matrix
 
 
-    def reshape(self, fmean=True, tmean=True):
+    def reshape(self, tidx=None, fmean=True, tmean=True):
         """ Reshape the data to match the UVW array
         """
+        if tidx is not None:
+            raise Exception(
+                'tidx not suited for NenuFAR-TV data'
+            )
         data = np.zeros(
             (
                 self.time.size,

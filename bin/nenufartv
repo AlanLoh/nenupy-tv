@@ -36,18 +36,25 @@ if __name__ == "__main__":
         required=True
     )
     parser.add_argument(
+        '-m',
+        '--crossmat',
+        type=str,
+        help="Savefile of the cross matrix in png",
+        required=True
+    )
+    parser.add_argument(
         '-S',
         '--fitsfile',
         type=str,
         default=None,
-        help="Path (without file name) to save fits file as well",
+        help="Path (without file name) to save fits file as well ofboth cross matrix and image",
         required=False
     )
     parser.add_argument(
         '-f',
         '--fov',
         type=float,
-        default=60,
+        default=80,
         help="Field of view in degrees",
         required=False
     )
@@ -89,16 +96,26 @@ if __name__ == "__main__":
         help="Maximal UV distance in lambdas",
         required=False
     )
+    parser.add_argument(
+        '--cal',
+        type=bool,
+        default=True,
+        help="Calibrate or not",
+        required=False
+    )
 
     args = parser.parse_args()
 
     visibility = Visibilities(args.obs)
     visibility.flagdata(nsig=args.nsig)
-    model = visibility.predict(
-        fov=args.fov,
-        cutoff=args.cutoff
-    )
-    cal_vis = visibility.calibrate(model)
+    if args.cal:
+        model = visibility.predict(
+            fov=args.fov,
+            cutoff=args.cutoff
+        )
+        cal_vis = visibility.calibrate(model)
+    else:
+        cal_vis = visibility.vis
     dirty = visibility.make_dirty(
         vis=cal_vis,
         fov=args.fov,
@@ -114,3 +131,9 @@ if __name__ == "__main__":
         niter=1000,
         threshold=5
     )
+    visibility.plot_crosscorr(
+        pngfile=args.crossmat,
+        fitsfile=args.fitsfile
+    )
+
+

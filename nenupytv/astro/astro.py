@@ -660,7 +660,7 @@ def astro_image(
         plt.savefig(pngfile, **kwargs)
 
     if fitsfile is not None:
-        fitsfile = path.join(fitsfile, 'nenufartv_{}.fits'.format(time.isot.split('.')[0]))
+        fitsfile = path.join(fitsfile, 'nenufartv_{}.fits'.format(time.isot.split('.')[0].replace(':', '-')))
         header = w.to_header()
         hdu = fits.PrimaryHDU(image, header=header)
         hdu.writeto(fitsfile, overwrite=True)

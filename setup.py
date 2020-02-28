@@ -35,4 +35,4 @@ setup(
 
 
 # Install on nancep
-# /usr/local/bin/pip3.5 install nenupytv --install-option=--prefix=/cep/lofar/nenupytv --upgrade
+# /usr/local/bin/pip3.5 install nenupytv --prefix=/cep/lofar/nenupytv --upgrade

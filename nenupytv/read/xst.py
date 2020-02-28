@@ -65,7 +65,18 @@ class XST(object):
         self._freq = data_tmp['xstsubband']
         self._data = data_tmp['data']
         #self._data = self._reshape(data_tmp['data'])
+
+        self.meta = {
+            'ma': self.ma,
+            'freq': np.unique(self._freq) * 0.1953125
+        }
         return
+
+
+    @property
+    def time(self):
+        return Time(self._time, format='jd')
+    
 
 
     # --------------------------------------------------------- #
@@ -76,6 +87,8 @@ class XST(object):
         if tidx is not None:
             if not isinstance(tidx, np.ndarray):
                 tidx = np.array([tidx])
+        else:
+            tidx = np.arange(self._time.shape[0])
         pdict = {'XX': 0, 'XY': 1, 'YX': 2, 'YY': 3}
 
         cross_matrix = np.zeros(
@@ -111,7 +124,7 @@ class XST(object):
             else:
                 pass
         else:
-            print(self._data.shape, tidx, bl_idx[ pdict[pol] ])
+            #print(self._data.shape, tidx, bl_idx[ pdict[pol] ])
             return self._data[tidx, :, bl_idx[ pdict[pol] ]]
 
 
@@ -137,7 +150,7 @@ class XST(object):
             pass
 
 
-    def reshape(self, tidx=None):
+    def reshape(self, tidx=None, fmean=False, tmean=False):
         """
         """
         if tidx is not None:
@@ -156,12 +169,28 @@ class XST(object):
         for ma_i in range(self._nma):
             for ma_j in range(ma_i, self._nma):
                 for pol_i, pol in enumerate(['XX', 'XY', 'YX', 'YY']):
-                    reshaped_matrix[..., ma_i, ma_j, pol_i] = self.get(
+                    # reshaped_matrix[..., ma_i, ma_j, pol_i] = self.get(
+                    #         ma1=ma_i,
+                    #         ma2=ma_j,
+                    #         pol=pol,
+                    #         tidx=tidx
+                    #     )
+                    reshaped_matrix[..., ma_j, ma_i, pol_i] = self.get(
                             ma1=ma_i,
                             ma2=ma_j,
                             pol=pol,
                             tidx=tidx
                         )
+        if fmean:
+            reshaped_matrix = np.expand_dims(
+                np.mean(reshaped_matrix, axis=1),
+                axis=1
+                )
+        if tmean:
+            reshaped_matrix = np.expand_dims(
+                np.mean(reshaped_matrix, axis=0),
+                axis=0
+            )
         return reshaped_matrix
 
 

@@ -17,16 +17,15 @@ __all__ = [
 
 
 import numpy as np
-#from astropy.time import Time
 
-from nenupytv.read import Crosslets
+import nenupytv
+from nenupytv.read import Crosslets, XST
 from nenupytv.uvw import UVW
 from nenupytv.instru import NenuFAR
 from nenupytv.image import Grid_Simple, Dirty
 from nenupytv.response import PSF
-from nenupytv.astro import eq_zenith, to_lmn, astro_image, radio_sources#, rephase, nenufar_loc
+from nenupytv.astro import eq_zenith, to_lmn, astro_image, radio_sources
 from nenupytv.calibration import Skymodel
-#from nenupytv.image import Grid, Grid_Simple, Dirty
 
 
 # ============================================================= #
@@ -36,12 +35,13 @@ class Visibilities(UVW):
     """
     """
 
-    def __init__(self, crosslets):
+    def __init__(self, crosslets, tidx=None):
         self.skymodel = None
         self.srcnames = None
 
         self.cross = crosslets
         self.vis = self.cross.reshape(
+            tidx=tidx,
             fmean=False,
             tmean=False
         )
@@ -62,7 +62,7 @@ class Visibilities(UVW):
         )
         # Compute the UVW coordinates at the zenith
         self.compute(
-            time=self.cross.time,
+            time=self.cross.time if tidx is None else self.cross.time[tidx],
             ra=None,
             dec=None,
         )
@@ -76,10 +76,17 @@ class Visibilities(UVW):
     @cross.setter
     def cross(self, c):
         if isinstance(c, str):
-            c = Crosslets(c)
-        if not isinstance(c, Crosslets):
+            if c.endswith('.dat'):
+                c = Crosslets(c)
+            elif c.endswith('.fits'):
+                c = XST(c)
+            else:
+                raise ValueError(
+                    'Unrecognized format'
+                )
+        if not isinstance(c, (Crosslets, XST)):
             raise TypeError(
-                'Crosslets object expected'
+                'Crosslets or XST object expected'
             )
         self._cross = c
         return
@@ -386,6 +393,116 @@ class Visibilities(UVW):
             fitsfile=fitsfile,
             **kwargs
         )
+        return
+
+
+    def plot_crosscorr(self, pngfile=None, fitsfile=None):
+        """
+        """
+        import matplotlib.pyplot as plt
+        from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
+        from matplotlib.colorbar import ColorbarBase
+        from matplotlib.ticker import LinearLocator
+        from matplotlib.colors import Normalize
+        from os import path
+
+        if fitsfile is not None:
+            from astropy.io import fits
+            
+            prihdr = fits.Header()
+            prihdr.set('INSTRU', 'NenuFAR')
+            prihdr.set('SOFTWARE', 'nenupytv')
+            prihdr.set('VERSION', nenupytv.__version__)
+            prihdr.set('OBSTART', self.cross.time[0].isot)
+            prihdr.set('OBSTOP', self.cross.time[-1].isot)
+            prihdr.set('FREQ', np.mean(self.freq))
+            prihdr.set('CONTACT', 'alan.loh@obspm.fr')
+
+            primhdu = fits.PrimaryHDU(data=None, header=prihdr)
+            hdus = [primhdu]
+
+            c_names = ['XX', 'XY', 'YX', 'YY']
+            c_indices = [0, 1, 2, 3]
+            for ci, ni in zip(c_indices, c_names):
+                di = np.absolute(
+                    np.mean(
+                        self.vis[..., ci].data,
+                        axis=(0, 1)
+                    )
+                )
+                di[np.arange(di.shape[0]), np.arange(di.shape[0])] = 0.
+                hdus.append(
+                    fits.ImageHDU(
+                        data=di,
+                        header=None,
+                        name=ni
+                    )
+                )
+            hdulist = fits.HDUList(hdus)
+            hdulist.writeto(
+                path.join(
+                    fitsfile,
+                    'nenufartv_crossmat_{}.fits'.format(
+                        self.cross.time[0].isot.split('.')[0].replace(':', '-')
+                    )
+                ),
+                overwrite=True
+            )
+
+        cross_matrix = np.absolute(
+            np.mean(
+                self.vis[..., 0].data,
+                axis=(0, 1)
+            )
+        )
+        cross_matrix[np.arange(cross_matrix.shape[0]), np.arange(cross_matrix.shape[1])] = 0.
+        cross_matrix = 10*np.log10(
+            cross_matrix
+        )
+
+        vmin = np.percentile(cross_matrix, 5.)
+        vmax = np.percentile(cross_matrix, 99)
+
+        fig, ax = plt.subplots(figsize=(10, 10))
+        im = ax.imshow(
+            cross_matrix,
+            origin='lower',
+            cmap='YlGnBu_r',
+            interpolation='nearest',
+            vmin=vmin,
+            vmax=vmax
+        )
+        ax_divider = make_axes_locatable(ax)
+        cax = ax_divider.append_axes("right", size=0.3, pad=0.2)
+        cb = ColorbarBase(
+            cax,
+            cmap='YlGnBu_r',
+            orientation='vertical',
+            norm=Normalize(vmin=vmin, vmax=vmax),
+            ticks=LinearLocator()
+        )
+        cb.solids.set_edgecolor('face')
+        cb.set_label('Amplitude XX (dB)')
+        cb.formatter.set_powerlimits((0, 0))
+        ax.set_xlabel('MA')
+        ax.set_ylabel('MA')
+        ax.set_title('{}'.format(
+                self.cross.time[self.cross.time.size//2].iso.split('.')[0]
+            )
+        )
+        ax.set_xticks(np.arange(0, self.array.ant1[0, :].size, 1));
+        ax.set_yticks(np.arange(0, self.array.ant2[:, 0].size, 1));
+        ax.set_xticklabels(self.array.ant1[0, :], fontsize=7, rotation=45);
+        ax.set_yticklabels(self.array.ant2[:, 0], fontsize=7);
+        ax.grid(color='black', linestyle='-', linewidth=1, alpha=0.1)
+
+        plt.tight_layout()
+
+        if pngfile is None:
+            plt.show()
+        else:
+            plt.savefig(pngfile, dpi=300)
+        
         return
 
 

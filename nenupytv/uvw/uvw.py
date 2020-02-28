@@ -228,7 +228,6 @@ class UVW(object):
 
         # Loop over time
         for i, ti in enumerate(time):
-
             # Check if a RA/Dec is specified,
             # otherwise compute at local zenith
             if (ra is None) and (dec is None):
@@ -269,6 +268,7 @@ class UVW(object):
             self.uvw[:, j, ...] = self.uvw[:, 0, ...].copy()
 
         self._flag_auto()
+
         return
 
 
