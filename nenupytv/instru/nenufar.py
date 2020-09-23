@@ -16,7 +16,7 @@ __all__ = [
 import numpy as np
 
 from nenupytv.instru import RadioArray
-from nenupytv.instru import ma_names, ma_positions, nenufar_pos
+from nenupytv.instru import ma_names, ma_positions, nenufar_pos, ma_positions_enu
 
 
 # ============================================================= #
@@ -34,6 +34,13 @@ class NenuFAR(RadioArray):
             array_position=nenufar_pos,
             antennas=miniarrays
         )
+
+    @property
+    def ma_enu(self):
+        """ENU coordinates
+        """
+        return ma_positions_enu[self.antennas]
+
 
     @property
     def baseline_xyz(self):

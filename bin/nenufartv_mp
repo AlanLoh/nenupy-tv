@@ -1,0 +1,156 @@
+#! /usr/bin/python3
+# -*- coding: utf-8 -*-
+
+
+"""
+"""
+
+
+__author__ = 'Alan Loh'
+__copyright__ = 'Copyright 2020, nenupytv'
+__credits__ = ['Alan Loh']
+__maintainer__ = 'Alan'
+__email__ = 'alan.loh@obspm.fr'
+__status__ = 'Production'
+
+
+import argparse
+import os.path as path
+
+from nenupytv.image import Imager
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        '-o',
+        '--obs',
+        type=str,
+        help="NenuFAR-TV file",
+        required=True
+    )
+    parser.add_argument(
+        '-s',
+        '--savefile',
+        type=str,
+        help="Savefile in png",
+        required=True
+    )
+    parser.add_argument(
+        '-m',
+        '--crossmat',
+        type=str,
+        help="Savefile of the cross matrix in png",
+        required=True
+    )
+    parser.add_argument(
+        '-n',
+        '--nearfield',
+        type=str,
+        default=None,
+        help="Savefile of the nearfield in png",
+        required=False
+    )
+    parser.add_argument(
+        '-S',
+        '--fitsfile',
+        type=str,
+        default=None,
+        help="Path (without file name) to save fits file as well of both cross matrix and image",
+        required=False
+    )
+    parser.add_argument(
+        '-f',
+        '--fov',
+        type=float,
+        default=60,
+        help="Field of view in degrees",
+        required=False
+    )
+    parser.add_argument(
+        '-p',
+        '--pointing',
+        type=str,
+        default=None,
+        help="Directory where the .altazA files are stored",
+        required=False
+    )
+    # parser.add_argument(
+    #     '-r',
+    #     '--robust',
+    #     type=float,
+    #     default=-2,
+    #     help="Robust factor",
+    #     required=False
+    # )
+    # parser.add_argument(
+    #     '-n',
+    #     '--nsig',
+    #     type=float,
+    #     default=10,
+    #     help="N sigma above mean where data are flagged",
+    #     required=False
+    # )
+    # parser.add_argument(
+    #     '-c',
+    #     '--cutoff',
+    #     type=float,
+    #     default=50,
+    #     help="Threshold in Jy below which sources are not included in the skymodel",
+    #     required=False
+    # )
+    parser.add_argument(
+        '--uvmin',
+        type=float,
+        default=5,
+        help="Minimal UV distance in lambdas",
+        required=False
+    )
+    parser.add_argument(
+        '--uvmax',
+        type=float,
+        default=None,
+        help="Maximal UV distance in lambdas",
+        required=False
+    )
+    # parser.add_argument(
+    #     '--cal',
+    #     type=bool,
+    #     default=True,
+    #     help="Calibrate or not",
+    #     required=False
+    # )
+
+    args = parser.parse_args()
+
+    imager = Imager(
+        crosslets=args.obs,
+        fov=args.fov,
+        ncpus=4
+    )
+    imager.make_dirty(
+        data='data',
+        npix=256,
+        uvwave_min=args.uvmin,
+        uvwave_max=args.uvmax
+    )
+    imager.plot_dirty(
+        output=args.savefile,
+        altazdir=args.pointing,
+        cbar=False
+    )
+    if args.fitsfile is not None:
+        imager.savefits_dirty(
+            output=path.join(args.fitsfile, 'nenufartv.fits')
+        )
+    imager.plot_crosscorr(
+        pngfile=args.crossmat,
+        fitsfile=args.fitsfile
+    )
+    if args.nearfield is not None:
+        imager.make_nearfield(
+            filename=args.nearfield,
+            npix=128
+        )
+
+

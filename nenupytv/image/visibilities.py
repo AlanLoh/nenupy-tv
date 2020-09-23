@@ -280,6 +280,24 @@ class Visibilities(UVW):
         return cal_vis
 
 
+    def make_nearfield_image(self):
+        """
+        """
+        extent = [-100, 100, -100, 100]
+        npix_p = 100
+        npix_q = 100
+        z = 10
+        x = np.linspace(extent[0], extent[1], npix_p)
+        y = np.linspace(extent[2], extent[3], npix_q)
+        posx, posy = np.meshgrid(x, y)
+        posxyz = np.transpose(np.array([posx, posy, z * np.ones_like(posx)]), [1, 2, 0])
+
+        station_pqr = self.bsl.copy()
+        diff_vectors = (station_pqr[:, None, None, :] - posxyz[None, :, :, :])
+        distances = np.linalg.norm(diff_vectors, axis=3)
+        return
+
+
     def make_dirty(self, vis=None, fov=60, robust=-2, **kwargs):
         """
         """

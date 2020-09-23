@@ -68,16 +68,16 @@ class Skymodel(object):
 
         model_dict = {}
 
-        ra, dec, res = self._hpx_coord(resolution=4)
+        ra, dec, res = self._hpx_coord(resolution=3)
         for r, d in tqdm(zip(ra, dec), total=ra.size):
             # Check if RA/Dec will ever be visible
             if d < nenufar_pos.lat.deg - 90:
                 continue
 
             sources = self._from_gsm(
-                ra=r,
-                dec=d,
-                radius=res*2,
+                ra=round(r, 3),
+                dec=round(d, 3),
+                radius=5.,
                 cutoff=self.cutoff
             )
             for source in sources.keys():

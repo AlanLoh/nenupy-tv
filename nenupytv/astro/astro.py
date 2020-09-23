@@ -27,6 +27,7 @@ __all__ = [
     'ref_location',
     'radio_sources',
     'ateam',
+    'AstroPlot',
     'astro_image'
     ]
 
@@ -536,6 +537,192 @@ def ateam():
     return src_radec
 # ============================================================= #
 
+
+# ============================================================= #
+# ------------------------- AstroPlot ------------------------- #
+# ============================================================= #
+class AstroPlot(object):
+    """
+    """
+    def __init__(self, image, center, resol):
+        self.npix_x = None
+        self.npix_y = None
+        self.image = image
+        self.center = center
+        self.resol = resol
+
+        self.wcs = WCS(naxis=2)
+        self.wcs.wcs.crpix = [self.npix_x/2, self.npix_y/2]
+        self.wcs.wcs.cdelt = np.array([self.resol, self.resol])
+        self.wcs.wcs.crval = [self.center[0], self.center[1]]
+        #self.wcs.wcs.ctype = ['RA---AIR', 'DEC--AIR']
+        self.wcs.wcs.ctype = ['RA---TAN', 'DEC--TAN']
+
+    @property
+    def image(self):
+        return self._image
+    @image.setter
+    def image(self, i):
+        if not len(i.shape) == 2:
+            raise ValueError(
+                'Weird image format.'
+            )
+        self.npix_x = i.shape[0]
+        self.npix_y = i.shape[1]
+        self._image = i
+        return
+
+    @property
+    def center(self):
+        return self._center
+    @center.setter
+    def center(self, c):
+        if not isinstance(c, tuple):
+            raise TypeError(
+                'center should be a tuple'
+            )
+        if not len(c) == 2:
+            raise ValueError(
+                'center should be a length-2 tuple'
+            )
+        self._center = c
+        return
+
+    def plot(self, title='', cblabel='', sources=True, time=None, filename=None, circle=None, **kwargs):
+        """
+        """
+        if 'cmap' not in kwargs.keys():
+            kwargs['cmap'] = 'YlGnBu_r'
+        if 'vmin' not in kwargs.keys():
+            kwargs['vmin'] = self.image.min()
+        if 'vmax' not in kwargs.keys():
+            kwargs['vmax'] = self.image.max()
+        
+        cbar = True
+        if 'cbar' in kwargs.keys():
+            cbar = kwargs['cbar']
+            del kwargs['cbar']
+
+        import matplotlib.pyplot as plt
+        from matplotlib.colorbar import ColorbarBase
+        from matplotlib.ticker import LinearLocator
+        from matplotlib.colors import Normalize
+        from matplotlib.cm import get_cmap
+        from mpl_toolkits.axes_grid1.inset_locator import inset_axes
+        from astropy.visualization.wcsaxes import SphericalCircle
+        
+        fig = plt.figure(figsize=(7, 7))
+        ax = plt.subplot(projection=self.wcs)
+        im = ax.imshow(
+            self.image,
+            origin='lower',
+            interpolation='nearest',
+            **kwargs
+        )
+
+        ax.coords.grid(True, color='white', ls='solid', alpha=0.5)
+        axra = ax.coords[0]
+        axdec = ax.coords[1]
+        axra.set_axislabel('RA')
+        axra.set_major_formatter('d')
+        axra.set_ticks(number=10)
+        axdec.set_axislabel('Dec')
+        axdec.set_major_formatter('d')
+        axdec.set_ticks(number=10)
+
+        if cbar:
+            cax = inset_axes(ax,
+               width='5%',
+               height='100%',
+               loc='lower left',
+               bbox_to_anchor=(1.05, 0., 1, 1),
+               bbox_transform=ax.transAxes,
+               borderpad=0,
+               )
+            cb = ColorbarBase(
+                cax,
+                cmap=get_cmap(name='YlGnBu_r'),
+                orientation='vertical',
+                norm=Normalize(vmin=kwargs['vmin'], vmax=kwargs['vmax']),
+                ticks=LinearLocator()
+            )
+            cb.solids.set_edgecolor('face')
+            cb.set_label(cblabel)
+            cb.formatter.set_powerlimits((0, 0))
+
+        if sources:
+            phase_center = radec(
+                ra=self.center[0],
+                dec=self.center[1]
+            )
+            if time is None:
+                time = Time.now()
+            srcs = radio_sources(time=time)
+            for k in srcs.keys():
+                src = radec(
+                    ra=srcs[k][0],
+                    dec=srcs[k][1]
+                )
+                if phase_center.separation(src).deg > self.npix_x/2 * self.resol:
+                    # Source not in FoV
+                    continue
+                ax.text(
+                    src.ra.deg,
+                    src.dec.deg,
+                    k.title(),
+                    transform=ax.get_transform('icrs'),
+                    color='white'
+                )
+
+        if circle is not None:
+            r1 = SphericalCircle(
+               center=(circle[0] * u.deg, circle[1] * u.deg),
+               radius=circle[2]/2 * u.deg,
+               resolution=100,
+               edgecolor='white',
+               facecolor='none',
+               transform=ax.get_transform('icrs')
+            )
+            ax.add_patch(r1)
+            r2 = SphericalCircle(
+               center=(circle[0] * u.deg, circle[1] * u.deg),
+               radius=circle[2] * u.deg,
+               resolution=100,
+               edgecolor='white',
+               linestyle=':',
+               facecolor='none',
+               transform=ax.get_transform('icrs')
+            )
+            ax.add_patch(r2)
+
+        ax.set_title(title)
+        # plt.tight_layout()
+        
+        if filename is None:
+            plt.show()
+        else:
+            plt.savefig(filename, dpi=300)
+        return
+
+    def savefits(self, fitsname, time=None, freq=None):
+        """
+        """
+        header = self.wcs.to_header()
+        hdu = fits.PrimaryHDU(self.image.data, header=header)
+        hdu.writeto(fitsname, overwrite=True)
+        fits.setval(fitsname, 'INSTRU', value='NenuFAR')
+        fits.setval(fitsname, 'SOFTWARE', value='nenupytv')
+        fits.setval(fitsname, 'VERSION', value=nenupytv.__version__)
+        fits.setval(fitsname, 'TIME', value=time.isot, comment='Time in UTC')
+        fits.setval(fitsname, 'FREQUENC', value=freq, comment='Mean frequency in MHz')
+        fits.setval(fitsname, 'STOKES', value='I')
+        fits.setval(fitsname, 'CONTACT', value='alan.loh@obspm.fr')
+        return
+
+# ============================================================= #
+
+
+    
 
 # ============================================================= #
 # ------------------------ astro_image ------------------------ #
